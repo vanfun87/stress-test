@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-type Stress struct {
+type StressClient struct {
 	Number     int
 	Concurrent int
 	Limitation int
 }
 
-func (s *Stress) Run(taskFunc func() error) {
+func (s *StressClient) Run(taskFunc func() error) {
 	printPrepareMessage(s)
 
 	startTime := uint64(time.Now().UnixNano())
@@ -53,23 +53,23 @@ func (s *Stress) Run(taskFunc func() error) {
 
 }
 
-func NewStress(number int, concurrent int, limitation int) *Stress {
-	return &Stress{
+func NewStressClient(number int, concurrent int, limitation int) *StressClient {
+	return &StressClient{
 		Number:     number,
 		Concurrent: concurrent,
 		Limitation: limitation,
 	}
 }
 
-func NewStressWithNumber(number int) *Stress {
-	return NewStress(number, 1, 0)
+func NewStressClientWithNumber(number int) *StressClient {
+	return NewStressClient(number, 1, 0)
 }
 
-func NewStressWithConcurrentNumber(number int, concurrent int) *Stress {
-	return NewStress(number, concurrent, 0)
+func NewStressClientWithConcurrentNumber(number int, concurrent int) *StressClient {
+	return NewStressClient(number, concurrent, 0)
 }
 
-func printPrepareMessage(s *Stress) {
+func printPrepareMessage(s *StressClient) {
 	msg := fmt.Sprintf("%d task(s) ready to run with %d thread(s)", s.Number, s.Concurrent)
 
 	if s.Limitation > 0 {
