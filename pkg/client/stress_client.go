@@ -45,9 +45,12 @@ func (s *StressTestClient) Header() {
 func (s *StressTestClient) RunSync(taskFunc func() error) {
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
+	wgStatistics := new(sync.WaitGroup)
 
 	st := statistics.NewResultStatistics()
-	go st.Watch(ch)
+
+	wgStatistics.Add(1)
+	go st.Watch(ch, wgStatistics)
 
 	wg.Add(1)
 	go runner.RunSync(s.Number, ch, wg, taskFunc)
@@ -55,4 +58,6 @@ func (s *StressTestClient) RunSync(taskFunc func() error) {
 
 	time.Sleep(1 * time.Millisecond)
 	close(ch)
+
+	wgStatistics.Wait()
 }

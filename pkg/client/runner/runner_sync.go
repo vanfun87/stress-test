@@ -6,12 +6,12 @@ import (
 )
 
 func RunSync(num int, ch chan<- *TaskResult, wg *sync.WaitGroup, taskFunc func() error) {
+	defer wg.Done()
+
 	for i := 0; i < num; i++ {
 		r := runSingleTask(taskFunc)
 		ch <- r
 	}
-
-	wg.Done()
 }
 
 func runSingleTask(taskFunc func() error) *TaskResult {

@@ -2,6 +2,7 @@ package statistics
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
@@ -29,7 +30,9 @@ func NewResultStatistics() *ResultStatistics {
 	}
 }
 
-func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult) {
+func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	s.StartTime = uint64(time.Now().UnixNano())
 
 	stopCh := make(chan bool)
@@ -74,8 +77,6 @@ func (s *ResultStatistics) Append(r *runner.TaskResult) {
 }
 
 func (s *ResultStatistics) PrintTableHeader() {
-	fmt.Printf("\n\n")
-	// 打印的时长都为毫秒 总请数
 	fmt.Println("─────────┬─────────┬─────────┬─────────┬──────────┬──────────┬──────────")
 	fmt.Println(" 耗时(s) │  成功数 │  失败数 │    qps  │ 最长耗时 │ 最短耗时 │ 平均耗时 ")
 	fmt.Println("─────────┼─────────┼─────────┼─────────┼──────────┼──────────┼──────────")
