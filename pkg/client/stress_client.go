@@ -1,6 +1,10 @@
 package client
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ginkgoch/stress-test/pkg/client/runner"
+)
 
 type StressTestClient struct {
 	Number     int
@@ -33,4 +37,8 @@ func (s *StressTestClient) Header() {
 
 	fmt.Println(msg)
 	fmt.Println()
+}
+
+func (s *StressTestClient) RunSync(taskFunc func() error) *runner.SerialTaskResult {
+	return runner.RunSync(s.Number, taskFunc)
 }
