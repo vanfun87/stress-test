@@ -1,10 +1,10 @@
-package stress
+package client
 
 import (
 	"time"
 )
 
-func RunSerial(num int, taskFunc func() error) *SerialTaskResult {
+func RunSync(num int, taskFunc func() error) *SerialTaskResult {
 	startTime := uint64(time.Now().UnixNano())
 	endTime := uint64(startTime)
 

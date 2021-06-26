@@ -3,13 +3,13 @@ package main
 import (
 	"time"
 
-	stress "github.com/ginkgoch/go-stress/pkg/client"
+	client "github.com/ginkgoch/stress-test/pkg/client"
 )
 
 func main() {
-	s := stress.NewStressClientWithNumber(100)
+	s := client.NewStressClientWithNumber(100)
 	s.Header()
-	r := stress.RunSerial(s.Number, func() error {
+	r := client.RunSync(s.Number, func() error {
 		time.Sleep(10 * time.Millisecond)
 		return nil
 	})
