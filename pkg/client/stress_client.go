@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
+	"github.com/ginkgoch/stress-test/pkg/client/statistics"
 )
 
 type StressTestClient struct {
@@ -42,25 +43,16 @@ func (s *StressTestClient) Header() {
 }
 
 func (s *StressTestClient) RunSync(taskFunc func() error) {
-	startTime := uint64(time.Now().UnixNano())
-
-	successNum := 0
-	failureNum := 0
-	var maxTime, minTime, processTime uint64 = 0, 0, 0
-
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
 
-	ticker := time.NewTicker(time.Second)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-			}
-		}
-	}()
+	st := statistics.NewResultStatistics()
+	go st.Watch(ch)
 
 	wg.Add(1)
 	go runner.RunSync(s.Number, ch, wg, taskFunc)
 	wg.Wait()
+
+	time.Sleep(1 * time.Millisecond)
+	close(ch)
 }
