@@ -2,12 +2,17 @@ package client
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
 	"github.com/ginkgoch/stress-test/pkg/client/statistics"
 )
+
+func init() {
+	runtime.GOMAXPROCS(1)
+}
 
 type StressTestClient struct {
 	Number        int

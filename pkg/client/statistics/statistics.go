@@ -83,20 +83,24 @@ func (s *ResultStatistics) Append(r *runner.TaskResult) {
 }
 
 func (s *ResultStatistics) PrintTableHeader() {
-	fmt.Println("─────────┬─────────┬─────────┬─────────┬──────────┬──────────┬──────────")
-	fmt.Println(" 耗时(s) │  成功数 │  失败数 │    qps  │ 最长耗时 │ 最短耗时 │ 平均耗时 ")
-	fmt.Println("─────────┼─────────┼─────────┼─────────┼──────────┼──────────┼──────────")
+	fmt.Println("─────────┬─────────┬─────────┬──────────┬──────────┬──────────┬──────────")
+	fmt.Println(" 耗时(s) │  成功数 │  失败数 │     qps  │ 最长耗时 │ 最短耗时 │ 平均耗时 ")
+	fmt.Println("─────────┼─────────┼─────────┼──────────┼──────────┼──────────┼──────────")
 }
 
 func (s *ResultStatistics) PrintTableRow() {
-	row := fmt.Sprintf(" %7d │ %7d │ %7d │ %7d │ %8d │ %8d │ %8.2f ",
+	processTime := s.ProcessTime
+	if processTime == 0 {
+		processTime = 1
+	}
+	row := fmt.Sprintf(" %7d │ %7d │ %7d │ %8.2f │ %8.2f │ %8.2f │ %8.2f ",
 		s.RunningTime/1e9,
 		s.SuccessNum,
 		s.FailureNum,
-		s.SuccessNum*1e9/s.ProcessTime*uint64(s.ConcurrentNum),
-		s.MaxTime/1e6,
-		s.MinTime/1e6,
-		float64(s.ProcessTime)/float64(1e6)/float64(s.SuccessNum+s.FailureNum),
+		float64(s.SuccessNum*uint64(s.ConcurrentNum)*1e9)/float64(processTime),
+		float64(s.MaxTime)/1e6,
+		float64(s.MinTime)/1e6,
+		float64(s.ProcessTime)/1e6/float64(s.SuccessNum+s.FailureNum),
 	)
 	fmt.Println(row)
 }

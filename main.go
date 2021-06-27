@@ -1,16 +1,19 @@
 package main
 
 import (
-	"time"
+	"net/http"
 
 	"github.com/ginkgoch/stress-test/pkg/client"
+	"github.com/ginkgoch/stress-test/pkg/templates"
 )
 
 func main() {
-	s := client.NewStressClientWithConcurrentNumber(1000, 4)
+	s := client.NewStressClientWithConcurrentNumber(20000, 40)
+
 	s.Header()
 	s.Run(func() error {
-		time.Sleep(20 * time.Millisecond)
-		return nil
+		request, _ := http.NewRequest("GET", "http://localhost:3000/version", nil)
+		err := templates.HttpGet(request)
+		return err
 	})
 }
