@@ -7,10 +7,10 @@ import (
 )
 
 func main() {
-	s := client.NewStressClientWithNumber(1000)
+	s := client.NewStressClientWithConcurrentNumber(1000, 4)
 	s.Header()
-	s.RunSync(func() error {
-		time.Sleep(10 * time.Millisecond)
+	s.Run(func() error {
+		time.Sleep(20 * time.Millisecond)
 		return nil
 	})
 }

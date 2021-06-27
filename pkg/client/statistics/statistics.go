@@ -9,6 +9,7 @@ import (
 )
 
 type ResultStatistics struct {
+	ConcurrentNum int
 	StartTime,
 	SuccessNum,
 	FailureNum,
@@ -18,15 +19,20 @@ type ResultStatistics struct {
 	ProcessTime uint64
 }
 
-func NewResultStatistics() *ResultStatistics {
+func NewResultStatistics(concurrentNum int) *ResultStatistics {
+	if concurrentNum == 0 {
+		concurrentNum = 1
+	}
+
 	return &ResultStatistics{
-		StartTime:   0,
-		SuccessNum:  0,
-		FailureNum:  0,
-		MaxTime:     0,
-		MinTime:     0,
-		RunningTime: 0,
-		ProcessTime: 0,
+		ConcurrentNum: concurrentNum,
+		StartTime:     0,
+		SuccessNum:    0,
+		FailureNum:    0,
+		MaxTime:       0,
+		MinTime:       0,
+		RunningTime:   0,
+		ProcessTime:   0,
 	}
 }
 
@@ -87,7 +93,7 @@ func (s *ResultStatistics) PrintTableRow() {
 		s.RunningTime/1e9,
 		s.SuccessNum,
 		s.FailureNum,
-		s.SuccessNum*1e9/s.ProcessTime,
+		s.SuccessNum*1e9/s.ProcessTime*uint64(s.ConcurrentNum),
 		s.MaxTime/1e6,
 		s.MinTime/1e6,
 		float64(s.ProcessTime)/float64(1e6)/float64(s.SuccessNum+s.FailureNum),

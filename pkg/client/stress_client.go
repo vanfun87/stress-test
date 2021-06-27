@@ -10,16 +10,16 @@ import (
 )
 
 type StressTestClient struct {
-	Number     int
-	Concurrent int
-	Limitation int
+	Number        int
+	ConcurrentNum int
+	Limitation    int
 }
 
 func NewStressClient(number int, concurrent int, limitation int) *StressTestClient {
 	return &StressTestClient{
-		Number:     number,
-		Concurrent: concurrent,
-		Limitation: limitation,
+		Number:        number,
+		ConcurrentNum: concurrent,
+		Limitation:    limitation,
 	}
 }
 
@@ -32,7 +32,7 @@ func NewStressClientWithConcurrentNumber(number int, concurrent int) *StressTest
 }
 
 func (s *StressTestClient) Header() {
-	msg := fmt.Sprintf("%d task(s) ready to run with %d thread(s)", s.Number, s.Concurrent)
+	msg := fmt.Sprintf("%d task(s) ready to run with %d thread(s)", s.Number, s.ConcurrentNum)
 
 	if s.Limitation > 0 {
 		msg += fmt.Sprintf("%s, with %d task(s) limitation per second", msg, s.Limitation)
@@ -42,18 +42,20 @@ func (s *StressTestClient) Header() {
 	fmt.Println()
 }
 
-func (s *StressTestClient) RunSync(taskFunc func() error) {
+func (s *StressTestClient) Run(taskFunc func() error) {
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
 
-	st := statistics.NewResultStatistics()
+	st := statistics.NewResultStatistics(s.ConcurrentNum)
 
 	wgStatistics.Add(1)
 	go st.Watch(ch, wgStatistics)
 
-	wg.Add(1)
-	go runner.RunSync(s.Number, ch, wg, taskFunc)
+	for i := 0; i < s.ConcurrentNum; i++ {
+		wg.Add(1)
+		go runner.RunSync(s.Number, ch, wg, taskFunc)
+	}
 	wg.Wait()
 
 	time.Sleep(1 * time.Millisecond)
