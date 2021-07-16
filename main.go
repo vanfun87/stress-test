@@ -8,11 +8,11 @@ import (
 )
 
 func main() {
-	s := client.NewStressClientWithConcurrentNumber(20000, 40)
+	s := client.NewStressClientWithConcurrentNumber(20000, 100)
 
 	s.Header()
 	s.Run(func() error {
-		request, _ := http.NewRequest("GET", "http://localhost:3000/version", nil)
+		request, _ := http.NewRequest("GET", "http://game-api:3001/version", nil)
 		err := templates.HttpGet(request)
 		return err
 	})
