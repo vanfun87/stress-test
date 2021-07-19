@@ -1,5 +1,10 @@
 package cmd
 
+import (
+	"net/http"
+	"time"
+)
+
 var trueFlags []string = []string{"true", "t", "1"}
 
 func ContainsStr(arr []string, target string) bool {
@@ -18,4 +23,20 @@ func ParseBool(v string) bool {
 	} else {
 		return false
 	}
+}
+
+func NewHttpClient(keepAlive bool) *http.Client {
+	var tr *http.Transport
+
+	if keepAlive {
+		tr = &http.Transport{
+			MaxIdleConnsPerHost: 1024,
+			TLSHandshakeTimeout: 0 * time.Second,
+		}
+	} else {
+		tr = new(http.Transport)
+	}
+
+	httpClient := &http.Client{Transport: tr}
+	return httpClient
 }
