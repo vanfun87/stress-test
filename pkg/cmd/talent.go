@@ -26,13 +26,13 @@ func init() {
 
 	toCmd.MarkFlagRequired("filepath")
 
-	toCmd.Example = "stress-test to signin -f ~/Downloads/2W-user.json"
+	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
 
 	rootCmd.AddCommand(toCmd)
 }
 
 var toCmd = &cobra.Command{
-	Use:   "to <test>",
+	Use:   "talent <action: signin>",
 	Short: "Talent optimization test",
 	Long:  `Talent optimization test`,
 	Args:  cobra.MinimumNArgs(1),
