@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client"
 	"github.com/ginkgoch/stress-test/pkg/templates"
@@ -16,6 +17,11 @@ var (
 	requestVerb     string
 	keepAlive       string
 	headers         []string
+)
+
+var (
+	once       sync.Once
+	httpClient *http.Client
 )
 
 func init() {
@@ -34,6 +40,21 @@ var curlCmd = &cobra.Command{
 	Long:  `Curl an url`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		once.Do(func() {
+			var tr *http.Transport
+
+			if ParseBool(keepAlive) {
+				tr = &http.Transport{
+					MaxIdleConnsPerHost: 1024,
+					TLSHandshakeTimeout: 0 * time.Second,
+				}
+			} else {
+				tr = new(http.Transport)
+			}
+
+			httpClient = &http.Client{Transport: tr}
+		})
+
 		s := client.NewStressClientWithConcurrentNumber(requestCount, concurrentCount)
 
 		s.Header()
@@ -43,13 +64,11 @@ var curlCmd = &cobra.Command{
 			if len(headers) > 0 {
 				for _, header := range headers {
 					segs := strings.Split(header, "=")
-
-					fmt.Printf("adding header %s = %s\n", segs[0], segs[1])
 					request.Header.Set(segs[0], segs[1])
 				}
 			}
 
-			err := templates.HttpGet(request)
+			err := templates.HttpGet(request, httpClient)
 			return err
 		})
 	},
