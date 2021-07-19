@@ -28,10 +28,11 @@ func init() {
 }
 
 var curlCmd = &cobra.Command{
-	Use:   "curl <url>",
-	Short: "Curl an url",
-	Long:  `Curl an url`,
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "curl <url>",
+	Short:   "Curl an url",
+	Long:    `Curl an url`,
+	Args:    cobra.MinimumNArgs(1),
+	Example: `stress-test curl http://localhost:3000/version -c 10000 -p 100 -H origin=moblab.com -H authorization="bearer abc" -k f`,
 	Run: func(cmd *cobra.Command, args []string) {
 		httpClient := NewHttpClient(ParseBool(keepAlive))
 
