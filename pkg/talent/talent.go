@@ -8,18 +8,27 @@ import (
 )
 
 const (
-	serviceEndPoint = "https://talent.test.moblab-us.cn/api/1"
-	// serviceEndPoint = "http://talent:3000/api/1/zhilian"
+	DefaultServiceEndPoint = "https://talent.test.moblab-us.cn/api/1"
+	// DefaultServiceEndPoint = "http://talent:3000/api/1"
 	signInUrl = "/zhilian/login"
 	statusUrl = "/status"
 )
 
 type TalentObject struct {
-	Cookie string
+	ServiceEndpoint string
+	Cookie          string
+}
+
+func NewTalentObject(serviceEndpoint string) *TalentObject {
+	if serviceEndpoint == "" {
+		serviceEndpoint = DefaultServiceEndPoint
+	}
+
+	return &TalentObject{ServiceEndpoint: serviceEndpoint}
 }
 
 func (talent *TalentObject) Status(httpClient *http.Client) error {
-	request, err := http.NewRequest("GET", formalizeUrl(statusUrl), nil)
+	request, err := http.NewRequest("GET", talent.formalizeUrl(statusUrl), nil)
 	if err != nil {
 		return err
 	}
@@ -29,7 +38,7 @@ func (talent *TalentObject) Status(httpClient *http.Client) error {
 }
 
 func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Client) error {
-	request, err := http.NewRequest("GET", formalizeUrl(signInUrl), nil)
+	request, err := http.NewRequest("GET", talent.formalizeUrl(signInUrl), nil)
 	if err != nil {
 		return err
 	}
@@ -64,6 +73,6 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 	return nil
 }
 
-func formalizeUrl(url string) string {
-	return fmt.Sprintf("%s%s", serviceEndPoint, url)
+func (talent *TalentObject) formalizeUrl(url string) string {
+	return fmt.Sprintf("%s%s", talent.ServiceEndpoint, url)
 }

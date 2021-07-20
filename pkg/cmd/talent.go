@@ -15,12 +15,14 @@ import (
 )
 
 var (
-	filepath string
-	limit    int
+	filepath       string
+	limit          int
+	serverEndpoint string
 )
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
+	toCmd.PersistentFlags().StringVarP(&serverEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndPoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.MarkFlagRequired("filepath")
 
@@ -70,7 +72,7 @@ var toCmd = &cobra.Command{
 			rateLimiter.Take()
 			tmpIndex := atomic.AddUint32(&index, 1)
 
-			talent := new(talent.TalentObject)
+			talent := talent.NewTalentObject(serverEndpoint)
 			signErr := talent.SignIn(userList[tmpIndex-1], httpClient)
 			// signErr := talent.Status(httpClient)
 			return signErr
