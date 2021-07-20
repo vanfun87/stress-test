@@ -62,32 +62,3 @@ var toCmd = &cobra.Command{
 		fmt.Println("response cookie", talent.Cookie)
 	},
 }
-
-// func doSignIn(user map[string]string, httpClient *http.Client) {
-// 	request, _ := http.NewRequest("GET", formalizeUrl(signInUrl), nil)
-
-// 	query := request.URL.Query()
-// 	for key := range user {
-// 		query.Add(key, user[key])
-// 	}
-// 	query.Add("accessId", "111111")
-
-// 	request.URL.RawQuery = query.Encode()
-
-// 	fmt.Println(request.URL.String())
-// 	_, err := templates.SendRequest(request, httpClient, func(res *http.Response) {
-// 		fmt.Println("response status", res.StatusCode)
-// 		fmt.Println("response headers", res.Header)
-// 		fmt.Println("response cookies", res.Cookies())
-// 	})
-
-// 	if err != nil {
-// 		fmt.Println("request failed", err)
-// 	} else {
-// 		fmt.Println("sign in successfully")
-// 	}
-// }
-
-// func formalizeUrl(url string) string {
-// 	return fmt.Sprintf("%s%s", serviceEndPoint, url)
-// }
