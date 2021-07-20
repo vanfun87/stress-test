@@ -17,24 +17,22 @@ type ResultStatistics struct {
 	MinTime,
 	RunningTime,
 	ProcessTime uint64
-	UseRateLimiter bool
 }
 
-func NewResultStatistics(concurrentNum int, useRateLimiter bool) *ResultStatistics {
+func NewResultStatistics(concurrentNum int) *ResultStatistics {
 	if concurrentNum == 0 {
 		concurrentNum = 1
 	}
 
 	return &ResultStatistics{
-		ConcurrentNum:  concurrentNum,
-		StartTime:      0,
-		SuccessNum:     0,
-		FailureNum:     0,
-		MaxTime:        0,
-		MinTime:        0,
-		RunningTime:    0,
-		ProcessTime:    0,
-		UseRateLimiter: useRateLimiter,
+		ConcurrentNum: concurrentNum,
+		StartTime:     0,
+		SuccessNum:    0,
+		FailureNum:    0,
+		MaxTime:       0,
+		MinTime:       0,
+		RunningTime:   0,
+		ProcessTime:   0,
 	}
 }
 
@@ -96,19 +94,13 @@ func (s *ResultStatistics) PrintTableRow() {
 		processTime = 1
 	}
 
-	var qps float64
-
-	if s.UseRateLimiter {
-		qps = float64(s.SuccessNum*1e9) / float64(s.RunningTime)
-	} else {
-		qps = float64(s.SuccessNum*uint64(s.ConcurrentNum)*1e9) / float64(processTime)
-	}
-
 	row := fmt.Sprintf(" %7d │ %7d │ %7d │ %8.2f │ %8.2f │ %8.2f │ %8.2f ",
 		s.RunningTime/1e9,
 		s.SuccessNum,
 		s.FailureNum,
-		qps,
+		// qps can also be more precise when no rate limiter involved
+		// float64(s.SuccessNum*uint64(s.ConcurrentNum)*1e9) / float64(processTime)
+		float64(s.SuccessNum*1e9)/float64(s.RunningTime),
 		float64(s.MaxTime)/1e6,
 		float64(s.MinTime)/1e6,
 		float64(s.ProcessTime)/1e6/float64(s.SuccessNum+s.FailureNum),

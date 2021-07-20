@@ -19,23 +19,13 @@ type TalentObject struct {
 }
 
 func (talent *TalentObject) Status(httpClient *http.Client) error {
-	request, err := http.NewRequest("GET", formalizeUrl(signInUrl), nil)
+	request, err := http.NewRequest("GET", formalizeUrl(statusUrl), nil)
 	if err != nil {
 		return err
 	}
 
-	res, err := httpClient.Do(request)
-	if err != nil {
-		return err
-	}
-
-	defer res.Body.Close()
-
-	if _, err = templates.ConsumeResponse(res); err != nil {
-		return err
-	}
-
-	return nil
+	err = templates.HttpGet(request, httpClient)
+	return err
 }
 
 func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Client) error {

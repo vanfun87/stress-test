@@ -21,7 +21,7 @@ var (
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
-	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 1000, "-l <limit>, default 500")
+	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
@@ -59,41 +59,21 @@ var toCmd = &cobra.Command{
 
 		fmt.Printf("loaded %v users \n", userLength)
 
-		s := client.NewStressClientWithConcurrentNumber(200, 100)
-		// s.UseRateLimiter = true
+		httpClient := NewHttpClientWithoutRedirect(true)
+		s := client.NewStressClientWithConcurrentNumber(1, userLength)
+
+		rateLimiter := ratelimit.New(limit)
+		var index uint32 = 0
 
 		s.Header()
-		rateLimiter := ratelimit.New(limit)
-
-		var index uint32 = 0
-		s.Run(func(i int) error {
+		s.Run(func() error {
 			rateLimiter.Take()
-			atomic.AddUint32(&index, 1)
+			tmpIndex := atomic.AddUint32(&index, 1)
 
 			talent := new(talent.TalentObject)
-
-			httpClient := NewHttpClientWithoutRedirect(true)
-			// signErr := talent.SignIn(userList[index], httpClient)
-			signErr := talent.Status(httpClient)
+			signErr := talent.SignIn(userList[tmpIndex-1], httpClient)
+			// signErr := talent.Status(httpClient)
 			return signErr
 		})
-
-		// s.Run(func(i int) error {
-		// 	talent := new(talent.TalentObject)
-
-		// 	httpClient := NewHttpClientWithoutRedirect(true)
-		// 	signErr := talent.SignIn(userList[i], httpClient)
-		// 	return signErr
-		// })
-
-		// talent := new(talent.TalentObject)
-		// httpClient := NewHttpClientWithoutRedirect(true)
-		// signErr := talent.SignIn(userList[0], httpClient)
-
-		// if signErr != nil {
-		// 	log.Fatal(signErr)
-		// } else {
-		// 	fmt.Println(talent.Cookie)
-		// }
 	},
 }
