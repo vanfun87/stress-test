@@ -34,10 +34,10 @@ func SendRequest(request *http.Request, client *http.Client, handler func(*http.
 
 	defer res.Body.Close()
 
-	if handler != nil {
-		handler(res)
-	}
+	return ConsumeResponse(res)
+}
 
+func ConsumeResponse(res *http.Response) ([]byte, error) {
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		return nil, fmt.Errorf("status code <%d> error", res.StatusCode)
 	}

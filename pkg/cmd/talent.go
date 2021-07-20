@@ -5,16 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/ginkgoch/stress-test/pkg/templates"
+	"github.com/ginkgoch/stress-test/pkg/talent"
 	"github.com/spf13/cobra"
-)
-
-const (
-	serviceEndPoint = "https://talent.test.moblab-us.cn/api/1/zhilian"
-	signInUrl       = "/login"
 )
 
 var (
@@ -57,35 +51,43 @@ var toCmd = &cobra.Command{
 
 		fmt.Printf("loaded %v users \n", userLength)
 
-		httpClient := NewHttpClient(true)
-		doSignIn(userList[0], httpClient)
+		talent := new(talent.TalentObject)
+
+		httpClient := NewHttpClientWithoutRedirect(true)
+		err = talent.SignIn(userList[0], httpClient)
+		if err != nil {
+			log.Fatal("sign-in failed", err)
+		}
+
+		fmt.Println("response cookie", talent.Cookie)
 	},
 }
 
-func doSignIn(user map[string]string, httpClient *http.Client) {
-	request, _ := http.NewRequest("GET", formalizeUrl(signInUrl), nil)
+// func doSignIn(user map[string]string, httpClient *http.Client) {
+// 	request, _ := http.NewRequest("GET", formalizeUrl(signInUrl), nil)
 
-	query := request.URL.Query()
-	for key := range user {
-		query.Add(key, user[key])
-	}
-	query.Add("accessId", "111111")
+// 	query := request.URL.Query()
+// 	for key := range user {
+// 		query.Add(key, user[key])
+// 	}
+// 	query.Add("accessId", "111111")
 
-	request.URL.RawQuery = query.Encode()
+// 	request.URL.RawQuery = query.Encode()
 
-	fmt.Println(request.URL.String())
-	_, err := templates.SendRequest(request, httpClient, func(res *http.Response) {
-		// cookie := res.Header[http.CanonicalHeaderKey("set-cookie")]
-		fmt.Println("cookie is", res.Header)
-	})
+// 	fmt.Println(request.URL.String())
+// 	_, err := templates.SendRequest(request, httpClient, func(res *http.Response) {
+// 		fmt.Println("response status", res.StatusCode)
+// 		fmt.Println("response headers", res.Header)
+// 		fmt.Println("response cookies", res.Cookies())
+// 	})
 
-	if err != nil {
-		fmt.Println("request failed", err)
-	} else {
-		fmt.Println("sign in successfully")
-	}
-}
+// 	if err != nil {
+// 		fmt.Println("request failed", err)
+// 	} else {
+// 		fmt.Println("sign in successfully")
+// 	}
+// }
 
-func formalizeUrl(url string) string {
-	return fmt.Sprintf("%s%s", serviceEndPoint, url)
-}
+// func formalizeUrl(url string) string {
+// 	return fmt.Sprintf("%s%s", serviceEndPoint, url)
+// }
