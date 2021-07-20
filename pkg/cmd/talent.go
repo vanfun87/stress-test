@@ -6,11 +6,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync/atomic"
 
 	"github.com/ginkgoch/stress-test/pkg/client"
 	"github.com/ginkgoch/stress-test/pkg/talent"
 	"github.com/spf13/cobra"
-	"golang.org/x/time/rate"
+	"go.uber.org/ratelimit"
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
-	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l 500")
+	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 1000, "-l <limit>, default 500")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
@@ -58,17 +59,24 @@ var toCmd = &cobra.Command{
 
 		fmt.Printf("loaded %v users \n", userLength)
 
-		s := client.NewStressClientWithConcurrentNumber(1, userLength)
+		s := client.NewStressClientWithConcurrentNumber(200, 100)
+		// s.UseRateLimiter = true
 
 		s.Header()
-		rateLimiter := rate.NewLimiter(1, limit)
-		s.RunWithRateLimiter(func(i int) error {
+		rateLimiter := ratelimit.New(limit)
+
+		var index uint32 = 0
+		s.Run(func(i int) error {
+			rateLimiter.Take()
+			atomic.AddUint32(&index, 1)
+
 			talent := new(talent.TalentObject)
 
 			httpClient := NewHttpClientWithoutRedirect(true)
-			signErr := talent.SignIn(userList[i], httpClient)
+			// signErr := talent.SignIn(userList[index], httpClient)
+			signErr := talent.Status(httpClient)
 			return signErr
-		}, rateLimiter)
+		})
 
 		// s.Run(func(i int) error {
 		// 	talent := new(talent.TalentObject)

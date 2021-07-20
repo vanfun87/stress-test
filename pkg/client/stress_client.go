@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"runtime"
 	"sync"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
 	"github.com/ginkgoch/stress-test/pkg/client/statistics"
-	"golang.org/x/time/rate"
 )
 
 func init() {
@@ -17,25 +15,27 @@ func init() {
 }
 
 type StressTestClient struct {
-	Number        int
-	ConcurrentNum int
-	Limitation    int
+	Number         int
+	ConcurrentNum  int
+	Limitation     int
+	UseRateLimiter bool
 }
 
-func NewStressClient(number int, concurrent int, limitation int) *StressTestClient {
+func NewStressClient(number int, concurrent int, limitation int, useRateLimiter bool) *StressTestClient {
 	return &StressTestClient{
-		Number:        number,
-		ConcurrentNum: concurrent,
-		Limitation:    limitation,
+		Number:         number,
+		ConcurrentNum:  concurrent,
+		Limitation:     limitation,
+		UseRateLimiter: useRateLimiter,
 	}
 }
 
 func NewStressClientWithNumber(number int) *StressTestClient {
-	return NewStressClient(number, 1, 0)
+	return NewStressClient(number, 1, 0, false)
 }
 
 func NewStressClientWithConcurrentNumber(number int, concurrent int) *StressTestClient {
-	return NewStressClient(number, concurrent, 0)
+	return NewStressClient(number, concurrent, 0, false)
 }
 
 func (s *StressTestClient) Header() {
@@ -54,7 +54,7 @@ func (s *StressTestClient) Run(taskFunc func(i int) error) {
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
 
-	st := statistics.NewResultStatistics(s.ConcurrentNum)
+	st := statistics.NewResultStatistics(s.ConcurrentNum, s.UseRateLimiter)
 
 	wgStatistics.Add(1)
 	go st.Watch(ch, wgStatistics)
@@ -71,30 +71,30 @@ func (s *StressTestClient) Run(taskFunc func(i int) error) {
 	wgStatistics.Wait()
 }
 
-func (s *StressTestClient) RunWithRateLimiter(taskFunc func(i int) error, rateLimiter *rate.Limiter) {
-	ch := make(chan *runner.TaskResult, 1000)
-	wg := new(sync.WaitGroup)
-	wgStatistics := new(sync.WaitGroup)
+// func (s *StressTestClient) RunWithRateLimiter(taskFunc func(i int) error, rateLimiter *rate.Limiter) {
+// 	ch := make(chan *runner.TaskResult, 1000)
+// 	wg := new(sync.WaitGroup)
+// 	wgStatistics := new(sync.WaitGroup)
 
-	st := statistics.NewResultStatistics(s.ConcurrentNum)
+// 	st := statistics.NewResultStatistics(s.ConcurrentNum)
 
-	wgStatistics.Add(1)
-	go st.Watch(ch, wgStatistics)
+// 	wgStatistics.Add(1)
+// 	go st.Watch(ch, wgStatistics)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	for i := 0; i < s.ConcurrentNum; i++ {
-		if rateLimiter != nil {
-			rateLimiter.Wait(ctx)
-		}
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	for i := 0; i < s.ConcurrentNum; i++ {
+// 		if rateLimiter != nil {
+// 			rateLimiter.Wait(ctx)
+// 		}
 
-		wg.Add(1)
-		go runner.RunSync(i, s.Number, ch, wg, taskFunc)
-	}
-	wg.Wait()
-	cancel()
+// 		wg.Add(1)
+// 		go runner.RunSync(i, s.Number, ch, wg, taskFunc)
+// 	}
+// 	wg.Wait()
+// 	cancel()
 
-	time.Sleep(1 * time.Millisecond)
-	close(ch)
+// 	time.Sleep(1 * time.Millisecond)
+// 	close(ch)
 
-	wgStatistics.Wait()
-}
+// 	wgStatistics.Wait()
+// }

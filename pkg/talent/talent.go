@@ -8,13 +8,34 @@ import (
 )
 
 const (
-	serviceEndPoint = "https://talent.test.moblab-us.cn/api/1/zhilian"
+	serviceEndPoint = "https://talent.test.moblab-us.cn/api/1"
 	// serviceEndPoint = "http://talent:3000/api/1/zhilian"
-	signInUrl = "/login"
+	signInUrl = "/zhilian/login"
+	statusUrl = "/status"
 )
 
 type TalentObject struct {
 	Cookie string
+}
+
+func (talent *TalentObject) Status(httpClient *http.Client) error {
+	request, err := http.NewRequest("GET", formalizeUrl(signInUrl), nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	if _, err = templates.ConsumeResponse(res); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Client) error {
