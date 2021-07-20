@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"sync"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
 	"github.com/ginkgoch/stress-test/pkg/client/statistics"
+	"golang.org/x/time/rate"
 )
 
 func init() {
@@ -47,7 +49,7 @@ func (s *StressTestClient) Header() {
 	fmt.Println()
 }
 
-func (s *StressTestClient) Run(taskFunc func() error) {
+func (s *StressTestClient) Run(taskFunc func(i int) error) {
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
@@ -59,9 +61,37 @@ func (s *StressTestClient) Run(taskFunc func() error) {
 
 	for i := 0; i < s.ConcurrentNum; i++ {
 		wg.Add(1)
-		go runner.RunSync(s.Number, ch, wg, taskFunc)
+		go runner.RunSync(i, s.Number, ch, wg, taskFunc)
 	}
 	wg.Wait()
+
+	time.Sleep(1 * time.Millisecond)
+	close(ch)
+
+	wgStatistics.Wait()
+}
+
+func (s *StressTestClient) RunWithRateLimiter(taskFunc func(i int) error, rateLimiter *rate.Limiter) {
+	ch := make(chan *runner.TaskResult, 1000)
+	wg := new(sync.WaitGroup)
+	wgStatistics := new(sync.WaitGroup)
+
+	st := statistics.NewResultStatistics(s.ConcurrentNum)
+
+	wgStatistics.Add(1)
+	go st.Watch(ch, wgStatistics)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	for i := 0; i < s.ConcurrentNum; i++ {
+		if rateLimiter != nil {
+			rateLimiter.Wait(ctx)
+		}
+
+		wg.Add(1)
+		go runner.RunSync(i, s.Number, ch, wg, taskFunc)
+	}
+	wg.Wait()
+	cancel()
 
 	time.Sleep(1 * time.Millisecond)
 	close(ch)

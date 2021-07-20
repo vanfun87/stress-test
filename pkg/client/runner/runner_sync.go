@@ -5,18 +5,18 @@ import (
 	"time"
 )
 
-func RunSync(num int, ch chan<- *TaskResult, wg *sync.WaitGroup, taskFunc func() error) {
+func RunSync(concurrentId int, num int, ch chan<- *TaskResult, wg *sync.WaitGroup, taskFunc func(i int) error) {
 	defer wg.Done()
 
 	for i := 0; i < num; i++ {
-		r := runSingleTask(taskFunc)
+		r := runSingleTask(concurrentId, taskFunc)
 		ch <- r
 	}
 }
 
-func runSingleTask(taskFunc func() error) *TaskResult {
+func runSingleTask(concurrentId int, taskFunc func(i int) error) *TaskResult {
 	startTime := time.Now()
-	err := taskFunc()
+	err := taskFunc(concurrentId)
 	endTime := time.Now()
 
 	processingTime := uint64(endTime.UnixNano() - startTime.UnixNano())

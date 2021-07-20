@@ -7,17 +7,20 @@ import (
 	"log"
 	"os"
 
+	"github.com/ginkgoch/stress-test/pkg/client"
 	"github.com/ginkgoch/stress-test/pkg/talent"
 	"github.com/spf13/cobra"
+	"golang.org/x/time/rate"
 )
 
 var (
 	filepath string
+	limit    int
 )
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
-
+	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l 500")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
@@ -31,6 +34,10 @@ var toCmd = &cobra.Command{
 	Long:  `Talent optimization test`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if limit < 1 {
+			log.Fatalf("limit <%v> must greater than 0\n", limit)
+		}
+
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
 			log.Fatalf("file not exits <%s>", filepath)
 		}
@@ -51,14 +58,34 @@ var toCmd = &cobra.Command{
 
 		fmt.Printf("loaded %v users \n", userLength)
 
-		talent := new(talent.TalentObject)
+		s := client.NewStressClientWithConcurrentNumber(1, userLength)
 
-		httpClient := NewHttpClientWithoutRedirect(true)
-		err = talent.SignIn(userList[0], httpClient)
-		if err != nil {
-			log.Fatal("sign-in failed", err)
-		}
+		s.Header()
+		rateLimiter := rate.NewLimiter(1, limit)
+		s.RunWithRateLimiter(func(i int) error {
+			talent := new(talent.TalentObject)
 
-		fmt.Println("response cookie", talent.Cookie)
+			httpClient := NewHttpClientWithoutRedirect(true)
+			signErr := talent.SignIn(userList[i], httpClient)
+			return signErr
+		}, rateLimiter)
+
+		// s.Run(func(i int) error {
+		// 	talent := new(talent.TalentObject)
+
+		// 	httpClient := NewHttpClientWithoutRedirect(true)
+		// 	signErr := talent.SignIn(userList[i], httpClient)
+		// 	return signErr
+		// })
+
+		// talent := new(talent.TalentObject)
+		// httpClient := NewHttpClientWithoutRedirect(true)
+		// signErr := talent.SignIn(userList[0], httpClient)
+
+		// if signErr != nil {
+		// 	log.Fatal(signErr)
+		// } else {
+		// 	fmt.Println(talent.Cookie)
+		// }
 	},
 }

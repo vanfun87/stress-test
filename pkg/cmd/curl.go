@@ -36,10 +36,10 @@ var curlCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		httpClient := NewHttpClient(ParseBool(keepAlive))
 
-		s := client.NewStressClientWithConcurrentNumber(requestCount, concurrentCount)
+		s := client.NewStressClientWithConcurrentNumber(2000, 100)
 
 		s.Header()
-		s.Run(func() error {
+		s.Run(func(i int) error {
 			request, _ := http.NewRequest(requestVerb, args[0], nil)
 
 			if len(headers) > 0 {

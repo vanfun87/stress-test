@@ -3,14 +3,14 @@ package talent
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/ginkgoch/stress-test/pkg/templates"
 )
 
 const (
 	serviceEndPoint = "https://talent.test.moblab-us.cn/api/1/zhilian"
-	signInUrl       = "/login"
+	// serviceEndPoint = "http://talent:3000/api/1/zhilian"
+	signInUrl = "/login"
 )
 
 type TalentObject struct {
@@ -41,9 +41,14 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 		return err
 	}
 
-	cookie := strings.Split(res.Cookies()[0].String(), ";")[0]
-	cookie = fmt.Sprintf("%s;%s", cookie, "undefined")
-	talent.Cookie = cookie
+	for _, cookie := range res.Cookies() {
+		if cookie.Name == "this.sid" {
+			cookie := cookie.String()
+			cookie = fmt.Sprintf("%s;%s", cookie, "undefined")
+			talent.Cookie = cookie
+			break
+		}
+	}
 
 	return nil
 }
