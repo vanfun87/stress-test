@@ -107,13 +107,18 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 		fmt.Println("debug - sign in success with cookie", talent.Cookie)
 	}
 
-	err = talent.Information(httpClient)
+	// err = talent.Information(httpClient)
 
-	if err != nil {
-		return nil, err
-	} else if debug {
-		fmt.Println("debug - information success")
-	}
+	// if err != nil {
+	// 	return nil, err
+	// } else if debug {
+	// 	fmt.Println("debug - information success")
+	// }
+
+	// err = talent.StartGame("ravens_matrices", httpClient)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// signErr := talent.Status(httpClient)
 

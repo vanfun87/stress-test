@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/ginkgoch/stress-test/pkg/templates"
 )
@@ -14,6 +15,7 @@ const (
 	signInUrl      = "/zhilian/login"
 	informationUrl = "/student/information?ignoreTrait=true"
 	statusUrl      = "/status"
+	startGameUrl   = "/startGame/%s/%s"
 )
 
 func NewTalentObject(serviceEndpoint string) *TalentObject {
@@ -94,6 +96,45 @@ func (talent *TalentObject) Information(httpClient *http.Client) error {
 
 	talent.UserId = info.User.ID
 	return nil
+}
+
+func (talent *TalentObject) StartGame(gameId string, httpClient *http.Client) error {
+	relPath := fmt.Sprintf(startGameUrl, talent.UserId, gameId)
+
+	request, err := http.NewRequest("GET", talent.formalizeUrl(relPath), nil)
+	if err != nil {
+		return err
+	}
+
+	// err = templates.HttpGet(request, httpClient)
+
+	res, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	data, err := templates.ConsumeResponse(res)
+	if err != nil {
+		return err
+	} else {
+		startGameData := new(StartGameData)
+		err = json.Unmarshal(data, startGameData)
+		if err == nil {
+			return err
+		}
+
+		gameConfig := new(GameConfig)
+		gameConfig.Server = startGameData.Data.ServerAddress
+		gameConfig.ID = startGameData.Data.ID
+		gameConfig.PlayerID, err = strconv.Atoi(startGameData.Data.PlayerID)
+		gameConfig.GameURL = startGameData.Data.Gameurl
+		gameConfig.RoomID = startGameData.Data.RoomID
+		talent.GameConfig = gameConfig
+	}
+
+	return err
 }
 
 func (talent *TalentObject) formalizeUrl(url string) string {
