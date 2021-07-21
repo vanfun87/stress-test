@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"sync/atomic"
 
@@ -18,12 +19,14 @@ var (
 	filepath       string
 	limit          int
 	serverEndpoint string
+	debug          bool
 )
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
 	toCmd.PersistentFlags().StringVarP(&serverEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndPoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
+	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
@@ -62,20 +65,42 @@ var toCmd = &cobra.Command{
 		fmt.Printf("loaded %v users \n", userLength)
 
 		httpClient := NewHttpClientWithoutRedirect(true)
-		s := client.NewStressClientWithConcurrentNumber(1, userLength)
 
-		rateLimiter := ratelimit.New(limit)
-		var index uint32 = 0
+		if debug {
+			talentObj, debugErr := executeSingleTask(userList[0], httpClient)
+			if debugErr != nil {
+				log.Fatal(debugErr)
+			} else {
+				fmt.Println("debug - talent object:", talentObj)
+			}
 
-		s.Header()
-		s.Run(func() error {
-			rateLimiter.Take()
-			tmpIndex := atomic.AddUint32(&index, 1)
-
-			talent := talent.NewTalentObject(serverEndpoint)
-			signErr := talent.SignIn(userList[tmpIndex-1], httpClient)
-			// signErr := talent.Status(httpClient)
-			return signErr
-		})
+		} else {
+			executeStressTest(userList, httpClient)
+		}
 	},
+}
+
+func executeStressTest(userList []map[string]string, httpClient *http.Client) {
+	s := client.NewStressClientWithConcurrentNumber(1, len(userList))
+
+	rateLimiter := ratelimit.New(limit)
+	var index uint32 = 0
+
+	s.Header()
+	s.Run(func() error {
+		rateLimiter.Take()
+		tmpIndex := atomic.AddUint32(&index, 1)
+
+		user := userList[tmpIndex-1]
+		_, signErr := executeSingleTask(user, httpClient)
+		return signErr
+	})
+}
+
+func executeSingleTask(user map[string]string, httpClient *http.Client) (*talent.TalentObject, error) {
+	talent := talent.NewTalentObject(serverEndpoint)
+	signErr := talent.SignIn(user, httpClient)
+	// signErr := talent.Status(httpClient)
+
+	return talent, signErr
 }

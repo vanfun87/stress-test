@@ -10,8 +10,9 @@ import (
 const (
 	DefaultServiceEndPoint = "https://talent.test.moblab-us.cn/api/1"
 	// DefaultServiceEndPoint = "http://talent:3000/api/1"
-	signInUrl = "/zhilian/login"
-	statusUrl = "/status"
+	signInUrl      = "/zhilian/login"
+	informationUrl = "/student/information?ignoreTrait=true"
+	statusUrl      = "/status"
 )
 
 type TalentObject struct {
