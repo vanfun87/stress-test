@@ -20,12 +20,14 @@ var (
 	limit          int
 	serverEndpoint string
 	debug          bool
+	stage          int
 )
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
 	toCmd.PersistentFlags().StringVarP(&serverEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndPoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
+	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.MarkFlagRequired("filepath")
 
@@ -71,7 +73,7 @@ var toCmd = &cobra.Command{
 			if debugErr != nil {
 				log.Fatal(debugErr)
 			} else {
-				fmt.Println("debug - talent id:", talentObj.UserId)
+				fmt.Println("debug - talent:", talentObj)
 			}
 
 		} else {
@@ -98,27 +100,64 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 }
 
 func executeSingleTask(user map[string]string, httpClient *http.Client, debug bool) (*talent.TalentObject, error) {
+	var err error
 	talent := talent.NewTalentObject(serverEndpoint)
-	err := talent.SignIn(user, httpClient)
 
-	if err != nil {
-		return nil, err
-	} else if debug {
-		fmt.Println("debug - sign in success with cookie", talent.Cookie)
+	if stage == -1 {
+		err = talent.Status(httpClient)
+		if err != nil {
+			return nil, err
+		} else if debug {
+			fmt.Println("debug - status success")
+		}
+
+		return talent, nil
 	}
 
-	// err = talent.Information(httpClient)
+	i := 0
+	if stage == 0 || stage > i {
+		err = talent.SignIn(user, httpClient)
+		if err != nil {
+			return nil, err
+		} else if debug {
+			fmt.Println("debug - sign in success with cookie", talent.Cookie)
+		}
 
-	// if err != nil {
-	// 	return nil, err
-	// } else if debug {
-	// 	fmt.Println("debug - information success")
-	// }
+		i++
+	}
 
-	// err = talent.StartGame("ravens_matrices", httpClient)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	if stage == 0 || stage > i {
+		err = talent.Information(httpClient)
+		if err != nil {
+			return nil, err
+		} else if debug {
+			fmt.Println("debug - information success", talent.UserId)
+		}
+
+		i++
+	}
+
+	if stage == 0 || stage > i {
+		err = talent.StartGame("ravens_matrices", httpClient)
+		if err != nil {
+			return nil, err
+		} else if debug {
+			fmt.Println("debug - start game success", talent.GameConfig)
+		}
+
+		i++
+	}
+
+	if stage == 0 || stage > i {
+		err = talent.StopGame("ravens_matrices", httpClient)
+		if err != nil {
+			return nil, err
+		} else if debug {
+			fmt.Println("debug - stop game success")
+		}
+
+		i++
+	}
 
 	// signErr := talent.Status(httpClient)
 

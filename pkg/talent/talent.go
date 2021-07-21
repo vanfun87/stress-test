@@ -16,6 +16,7 @@ const (
 	informationUrl = "/student/information?ignoreTrait=true"
 	statusUrl      = "/status"
 	startGameUrl   = "/startGame/%s/%s"
+	finishGameUrl  = "/game/finish/%s"
 )
 
 func NewTalentObject(serviceEndpoint string) *TalentObject {
@@ -102,11 +103,14 @@ func (talent *TalentObject) StartGame(gameId string, httpClient *http.Client) er
 	relPath := fmt.Sprintf(startGameUrl, talent.UserId, gameId)
 
 	request, err := http.NewRequest("GET", talent.formalizeUrl(relPath), nil)
+	request.Header.Set("Content-Type", "application/json")
+
+	if talent.Cookie != nil {
+		request.AddCookie(talent.Cookie)
+	}
 	if err != nil {
 		return err
 	}
-
-	// err = templates.HttpGet(request, httpClient)
 
 	res, err := httpClient.Do(request)
 	if err != nil {
@@ -121,7 +125,7 @@ func (talent *TalentObject) StartGame(gameId string, httpClient *http.Client) er
 	} else {
 		startGameData := new(StartGameData)
 		err = json.Unmarshal(data, startGameData)
-		if err == nil {
+		if err != nil {
 			return err
 		}
 
@@ -135,6 +139,23 @@ func (talent *TalentObject) StartGame(gameId string, httpClient *http.Client) er
 	}
 
 	return err
+}
+
+func (talent *TalentObject) StopGame(gameId string, httpClient *http.Client) (err error) {
+	relPath := fmt.Sprintf(finishGameUrl, gameId)
+
+	request, err := http.NewRequest("GET", talent.formalizeUrl(relPath), nil)
+	request.Header.Set("Content-Type", "application/json")
+
+	if talent.Cookie != nil {
+		request.AddCookie(talent.Cookie)
+	}
+	if err != nil {
+		return err
+	}
+
+	err = templates.HttpGet(request, httpClient)
+	return
 }
 
 func (talent *TalentObject) formalizeUrl(url string) string {
