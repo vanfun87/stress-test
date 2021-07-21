@@ -104,7 +104,7 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 	if err != nil {
 		return nil, err
 	} else if debug {
-		fmt.Println("debug - sign in success")
+		fmt.Println("debug - sign in success with cookie", talent.Cookie)
 	}
 
 	err = talent.Information(httpClient)

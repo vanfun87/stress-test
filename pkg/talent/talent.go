@@ -40,6 +40,8 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 		return err
 	}
 
+	request.Header.Set("x-forwarded-proto", "https")
+
 	query := request.URL.Query()
 	for key := range user {
 		query.Add(key, user[key])
