@@ -1,6 +1,7 @@
 package talent
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -14,11 +15,6 @@ const (
 	informationUrl = "/student/information?ignoreTrait=true"
 	statusUrl      = "/status"
 )
-
-type TalentObject struct {
-	ServiceEndpoint string
-	Cookie          string
-}
 
 func NewTalentObject(serviceEndpoint string) *TalentObject {
 	if serviceEndpoint == "" {
@@ -64,13 +60,37 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 
 	for _, cookie := range res.Cookies() {
 		if cookie.Name == "this.sid" {
-			cookie := cookie.String()
-			cookie = fmt.Sprintf("%s;%s", cookie, "undefined")
 			talent.Cookie = cookie
 			break
 		}
 	}
 
+	return nil
+}
+
+func (talent *TalentObject) Information(httpClient *http.Client) error {
+	request, err := http.NewRequest("GET", talent.formalizeUrl(informationUrl), nil)
+	request.AddCookie(talent.Cookie)
+	if err != nil {
+		return err
+	}
+
+	res, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	infoData, err := templates.ConsumeResponse(res)
+	if err != nil {
+		return err
+	}
+
+	info := new(Information)
+	if err = json.Unmarshal(infoData, &info); err != nil {
+		return err
+	}
+
+	talent.UserId = info.User.ID
 	return nil
 }
 

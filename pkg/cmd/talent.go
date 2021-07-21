@@ -67,11 +67,11 @@ var toCmd = &cobra.Command{
 		httpClient := NewHttpClientWithoutRedirect(true)
 
 		if debug {
-			talentObj, debugErr := executeSingleTask(userList[0], httpClient)
+			talentObj, debugErr := executeSingleTask(userList[0], httpClient, debug)
 			if debugErr != nil {
 				log.Fatal(debugErr)
 			} else {
-				fmt.Println("debug - talent object:", talentObj)
+				fmt.Println("debug - talent id:", talentObj.UserId)
 			}
 
 		} else {
@@ -92,15 +92,30 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 		tmpIndex := atomic.AddUint32(&index, 1)
 
 		user := userList[tmpIndex-1]
-		_, signErr := executeSingleTask(user, httpClient)
-		return signErr
+		_, debugErr := executeSingleTask(user, httpClient, false)
+		return debugErr
 	})
 }
 
-func executeSingleTask(user map[string]string, httpClient *http.Client) (*talent.TalentObject, error) {
+func executeSingleTask(user map[string]string, httpClient *http.Client, debug bool) (*talent.TalentObject, error) {
 	talent := talent.NewTalentObject(serverEndpoint)
-	signErr := talent.SignIn(user, httpClient)
+	err := talent.SignIn(user, httpClient)
+
+	if err != nil {
+		return nil, err
+	} else if debug {
+		fmt.Println("debug - sign in success")
+	}
+
+	err = talent.Information(httpClient)
+
+	if err != nil {
+		return nil, err
+	} else if debug {
+		fmt.Println("debug - information success")
+	}
+
 	// signErr := talent.Status(httpClient)
 
-	return talent, signErr
+	return talent, err
 }
