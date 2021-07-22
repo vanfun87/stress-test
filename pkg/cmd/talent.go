@@ -66,7 +66,10 @@ var toCmd = &cobra.Command{
 
 		fmt.Printf("loaded %v users \n", userLength)
 
-		var httpClient *http.Client = nil //NewHttpClientWithoutRedirect(true)
+		var httpClient *http.Client
+		if ParseBool(keepAlive) {
+			httpClient = NewHttpClientWithoutRedirect(true)
+		}
 
 		if debug {
 			talentObj, debugErr := executeSingleTask(userList[0], httpClient, debug)

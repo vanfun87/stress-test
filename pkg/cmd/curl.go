@@ -13,7 +13,6 @@ var (
 	requestCount    int
 	concurrentCount int
 	requestVerb     string
-	keepAlive       string
 	headers         []string
 )
 
@@ -21,7 +20,6 @@ func init() {
 	curlCmd.PersistentFlags().IntVarP(&requestCount, "requestCount", "c", 20000, "e.g 20000")
 	curlCmd.PersistentFlags().IntVarP(&concurrentCount, "concurrentCount", "p", 100, "e.g 100")
 	curlCmd.PersistentFlags().StringVarP(&requestVerb, "requestVerb", "v", "GET", "GET|POST|PUT|DELETE")
-	curlCmd.PersistentFlags().StringVarP(&keepAlive, "keepAlive", "k", "true", "true|t|1 or false|f|0")
 	curlCmd.PersistentFlags().StringArrayVarP(&headers, "header", "H", []string{}, "origin=eureka.com")
 
 	rootCmd.AddCommand(curlCmd)
