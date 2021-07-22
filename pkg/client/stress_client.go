@@ -48,10 +48,22 @@ func (s *StressTestClient) Header() {
 }
 
 func (s *StressTestClient) Run(taskFunc func() error) {
-	s.RunWithRateLimiter(nil, taskFunc)
+	s.RunSingleTaskWithRateLimiter(nil, taskFunc)
 }
 
-func (s *StressTestClient) RunWithRateLimiter(rateLimiter ratelimit.Limiter, taskFunc func() error) {
+func (s *StressTestClient) RunSingleTaskWithRateLimiter(rateLimiter ratelimit.Limiter, taskFunc func() error) {
+	s.runWithRateLimiterInternal(rateLimiter, func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult) {
+		runner.RunSync(s.Number, ch, wg, taskFunc)
+	})
+}
+
+func (s *StressTestClient) RunMultiTasksWithRateLimiter(rateLimiter ratelimit.Limiter, taskFunc func(ch chan<- *runner.TaskResult) error) {
+	s.runWithRateLimiterInternal(rateLimiter, func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult) {
+		runner.RunSyncWithMultiTasks(s.Number, ch, wg, taskFunc)
+	})
+}
+
+func (s *StressTestClient) runWithRateLimiterInternal(rateLimiter ratelimit.Limiter, taskFunc func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult)) {
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
@@ -67,7 +79,7 @@ func (s *StressTestClient) RunWithRateLimiter(rateLimiter ratelimit.Limiter, tas
 			if rateLimiter != nil {
 				rateLimiter.Take()
 			}
-			runner.RunSync(s.Number, ch, wg, taskFunc)
+			taskFunc(s.Number, wg, ch)
 		}()
 	}
 	wg.Wait()

@@ -25,3 +25,11 @@ func runSingleTask(taskFunc func() error) *TaskResult {
 		ProcessTime: processingTime,
 	}
 }
+
+func RunSyncWithMultiTasks(num int, ch chan<- *TaskResult, wg *sync.WaitGroup, taskFunc func(ch chan<- *TaskResult) error) {
+	defer wg.Done()
+
+	for i := 0; i < num; i++ {
+		taskFunc(ch)
+	}
+}

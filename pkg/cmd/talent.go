@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client"
+	"github.com/ginkgoch/stress-test/pkg/client/runner"
 	"github.com/ginkgoch/stress-test/pkg/talent"
 	"github.com/spf13/cobra"
 	"go.uber.org/ratelimit"
@@ -21,6 +23,7 @@ var (
 	serverEndpoint string
 	debug          bool
 	stage          int
+	useQps         bool
 )
 
 func init() {
@@ -29,6 +32,7 @@ func init() {
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
+	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
@@ -72,7 +76,7 @@ var toCmd = &cobra.Command{
 		}
 
 		if debug {
-			talentObj, debugErr := executeSingleTask(userList[0], httpClient, debug)
+			talentObj, debugErr := executeSingleTask(userList[0], httpClient, nil)
 			if debugErr != nil {
 				log.Fatal(debugErr)
 			} else {
@@ -92,17 +96,29 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 	var index uint32 = 0
 
 	s.Header()
-	s.RunWithRateLimiter(rateLimiter, func() error {
-		tmpIndex := atomic.AddUint32(&index, 1)
 
-		user := userList[tmpIndex-1]
+	if !useQps {
+		s.RunSingleTaskWithRateLimiter(rateLimiter, func() error {
+			tmpIndex := atomic.AddUint32(&index, 1)
 
-		_, debugErr := executeSingleTask(user, httpClient, false)
-		return debugErr
-	})
+			user := userList[tmpIndex-1]
+
+			_, debugErr := executeSingleTask(user, httpClient, nil)
+			return debugErr
+		})
+	} else {
+		s.RunMultiTasksWithRateLimiter(rateLimiter, func(ch chan<- *runner.TaskResult) error {
+			tmpIndex := atomic.AddUint32(&index, 1)
+
+			user := userList[tmpIndex-1]
+
+			_, debugErr := executeSingleTask(user, httpClient, ch)
+			return debugErr
+		})
+	}
 }
 
-func executeSingleTask(user map[string]string, httpClient *http.Client, debug bool) (talentObj *talent.TalentObject, err error) {
+func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<- *runner.TaskResult) (talentObj *talent.TalentObject, err error) {
 	if httpClient == nil {
 		httpClient = NewHttpClientWithoutRedirect(false)
 	}
@@ -110,7 +126,16 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 	talentObj = talent.NewTalentObject(serverEndpoint)
 
 	if stage == -1 {
+		t1 := time.Now()
 		err = talentObj.Status(httpClient)
+		d := time.Since(t1).Nanoseconds()
+		if ch != nil {
+			ch <- &runner.TaskResult{
+				Success:     err == nil,
+				ProcessTime: uint64(d),
+			}
+		}
+
 		if err != nil {
 			return nil, err
 		} else if debug {
@@ -122,7 +147,16 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 
 	i := 0
 	if stage == 0 || stage > i {
+		t1 := time.Now()
 		err = talentObj.SignIn(user, httpClient)
+		d := time.Since(t1).Nanoseconds()
+		if ch != nil {
+			ch <- &runner.TaskResult{
+				Success:     err == nil,
+				ProcessTime: uint64(d),
+			}
+		}
+
 		if err != nil {
 			return nil, err
 		} else if debug {
@@ -133,7 +167,16 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 	}
 
 	if stage == 0 || stage > i {
+		t1 := time.Now()
 		err = talentObj.Information(httpClient)
+		d := time.Since(t1).Nanoseconds()
+		if ch != nil {
+			ch <- &runner.TaskResult{
+				Success:     err == nil,
+				ProcessTime: uint64(d),
+			}
+		}
+
 		if err != nil {
 			return nil, err
 		} else if debug {
@@ -144,7 +187,16 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 	}
 
 	if stage == 0 || stage > i {
+		t1 := time.Now()
 		err = talentObj.StartGame("competitive_math", httpClient)
+		d := time.Since(t1).Nanoseconds()
+		if ch != nil {
+			ch <- &runner.TaskResult{
+				Success:     err == nil,
+				ProcessTime: uint64(d),
+			}
+		}
+
 		if err != nil {
 			return nil, err
 		} else if debug {
@@ -166,7 +218,16 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 	}
 
 	if stage == 0 || stage > i {
+		t1 := time.Now()
 		err = talentObj.StopGame("competitive_math", httpClient)
+		d := time.Since(t1).Nanoseconds()
+		if ch != nil {
+			ch <- &runner.TaskResult{
+				Success:     err == nil,
+				ProcessTime: uint64(d),
+			}
+		}
+
 		if err != nil {
 			return nil, err
 		} else if debug {
@@ -175,8 +236,6 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 
 		i++
 	}
-
-	// signErr := talent.Status(httpClient)
 
 	return
 }
