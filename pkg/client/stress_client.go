@@ -8,6 +8,7 @@ import (
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
 	"github.com/ginkgoch/stress-test/pkg/client/statistics"
+	"go.uber.org/ratelimit"
 )
 
 func init() {
@@ -48,6 +49,10 @@ func (s *StressTestClient) Header() {
 }
 
 func (s *StressTestClient) Run(taskFunc func() error) {
+	s.RunWithRateLimiter(nil, taskFunc)
+}
+
+func (s *StressTestClient) RunWithRateLimiter(rateLimiter ratelimit.Limiter, taskFunc func() error) {
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
@@ -59,7 +64,12 @@ func (s *StressTestClient) Run(taskFunc func() error) {
 
 	for i := 0; i < s.ConcurrentNum; i++ {
 		wg.Add(1)
-		go runner.RunSync(s.Number, ch, wg, taskFunc)
+		go func() {
+			if rateLimiter != nil {
+				rateLimiter.Take()
+			}
+			runner.RunSync(s.Number, ch, wg, taskFunc)
+		}()
 	}
 	wg.Wait()
 

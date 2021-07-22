@@ -52,6 +52,7 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 	query.Add("accessId", "111111")
 
 	request.URL.RawQuery = query.Encode()
+
 	res, err := httpClient.Do(request)
 	if err != nil {
 		return err

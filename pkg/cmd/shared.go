@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -34,7 +35,9 @@ func NewHttpClient(keepAlive bool) *http.Client {
 			TLSHandshakeTimeout: 0 * time.Second,
 		}
 	} else {
-		tr = new(http.Transport)
+		tr = &http.Transport{
+			DisableKeepAlives: true,
+		}
 	}
 
 	httpClient := &http.Client{Transport: tr}
@@ -50,7 +53,9 @@ func NewHttpClientWithoutRedirect(keepAlive bool) *http.Client {
 			TLSHandshakeTimeout: 0 * time.Second,
 		}
 	} else {
-		tr = new(http.Transport)
+		tr = &http.Transport{
+			DisableKeepAlives: true,
+		}
 	}
 
 	httpClient := &http.Client{Transport: tr, CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -58,4 +63,11 @@ func NewHttpClientWithoutRedirect(keepAlive bool) *http.Client {
 	}}
 
 	return httpClient
+}
+
+func TimeIt(handler func()) {
+	startTime := time.Now()
+	handler()
+	elapsed := time.Since(startTime).Milliseconds()
+	fmt.Println("time-it: ", elapsed)
 }

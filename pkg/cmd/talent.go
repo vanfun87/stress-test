@@ -66,7 +66,7 @@ var toCmd = &cobra.Command{
 
 		fmt.Printf("loaded %v users \n", userLength)
 
-		httpClient := NewHttpClientWithoutRedirect(true)
+		var httpClient *http.Client = nil //NewHttpClientWithoutRedirect(true)
 
 		if debug {
 			talentObj, debugErr := executeSingleTask(userList[0], httpClient, debug)
@@ -89,11 +89,15 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 	var index uint32 = 0
 
 	s.Header()
-	s.Run(func() error {
-		rateLimiter.Take()
+	s.RunWithRateLimiter(rateLimiter, func() error {
 		tmpIndex := atomic.AddUint32(&index, 1)
 
 		user := userList[tmpIndex-1]
+
+		if httpClient == nil {
+			httpClient = NewHttpClientWithoutRedirect(false)
+		}
+
 		_, debugErr := executeSingleTask(user, httpClient, false)
 		return debugErr
 	})
