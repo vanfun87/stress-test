@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"runtime"
 	"sync"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func init() {
-	runtime.GOMAXPROCS(1)
+	// runtime.GOMAXPROCS(1)
 }
 
 type StressTestClient struct {

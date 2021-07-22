@@ -94,66 +94,76 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 
 		user := userList[tmpIndex-1]
 
-		if httpClient == nil {
-			httpClient = NewHttpClientWithoutRedirect(false)
-		}
-
 		_, debugErr := executeSingleTask(user, httpClient, false)
 		return debugErr
 	})
 }
 
-func executeSingleTask(user map[string]string, httpClient *http.Client, debug bool) (*talent.TalentObject, error) {
-	var err error
-	talent := talent.NewTalentObject(serverEndpoint)
+func executeSingleTask(user map[string]string, httpClient *http.Client, debug bool) (talentObj *talent.TalentObject, err error) {
+	if httpClient == nil {
+		httpClient = NewHttpClientWithoutRedirect(false)
+	}
+
+	talentObj = talent.NewTalentObject(serverEndpoint)
 
 	if stage == -1 {
-		err = talent.Status(httpClient)
+		err = talentObj.Status(httpClient)
 		if err != nil {
 			return nil, err
 		} else if debug {
 			fmt.Println("debug - status success")
 		}
 
-		return talent, nil
+		return
 	}
 
 	i := 0
 	if stage == 0 || stage > i {
-		err = talent.SignIn(user, httpClient)
+		err = talentObj.SignIn(user, httpClient)
 		if err != nil {
 			return nil, err
 		} else if debug {
-			fmt.Println("debug - sign in success with cookie", talent.Cookie)
+			fmt.Println("debug - sign in success with cookie", talentObj.Cookie)
 		}
 
 		i++
 	}
 
 	if stage == 0 || stage > i {
-		err = talent.Information(httpClient)
+		err = talentObj.Information(httpClient)
 		if err != nil {
 			return nil, err
 		} else if debug {
-			fmt.Println("debug - information success", talent.UserId)
+			fmt.Println("debug - information success", talentObj.UserId)
 		}
 
 		i++
 	}
 
 	if stage == 0 || stage > i {
-		err = talent.StartGame("ravens_matrices", httpClient)
+		err = talentObj.StartGame("competitive_math", httpClient)
 		if err != nil {
 			return nil, err
 		} else if debug {
-			fmt.Println("debug - start game success", talent.GameConfig)
+			fmt.Println("debug - start game success", talentObj.GameConfig)
 		}
 
 		i++
 	}
 
 	if stage == 0 || stage > i {
-		err = talent.StopGame("ravens_matrices", httpClient)
+		err = talentObj.PlayGame("competitive_math")
+		if err != nil {
+			return nil, err
+		} else if debug {
+			fmt.Println("debug - play game success")
+		}
+
+		i++
+	}
+
+	if stage == 0 || stage > i {
+		err = talentObj.StopGame("competitive_math", httpClient)
 		if err != nil {
 			return nil, err
 		} else if debug {
@@ -165,5 +175,5 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, debug bo
 
 	// signErr := talent.Status(httpClient)
 
-	return talent, err
+	return
 }
