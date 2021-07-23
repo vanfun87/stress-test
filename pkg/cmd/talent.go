@@ -24,6 +24,7 @@ var (
 	debug          bool
 	stage          int
 	useQps         bool
+	game           bool
 )
 
 func init() {
@@ -33,18 +34,19 @@ func init() {
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
+	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
 	toCmd.MarkFlagRequired("filepath")
 
-	toCmd.Example = "stress-test talent signin -f ~/Downloads/2W-user.json"
+	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
 
 	rootCmd.AddCommand(toCmd)
 }
 
 var toCmd = &cobra.Command{
-	Use:   "talent <action: signin>",
+	Use:   "talent",
 	Short: "Talent optimization test",
 	Long:  `Talent optimization test`,
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		if limit < 1 {
 			log.Fatalf("limit <%v> must greater than 0\n", limit)
@@ -76,13 +78,10 @@ var toCmd = &cobra.Command{
 		}
 
 		if debug {
-			talentObj, debugErr := executeSingleTask(userList[0], httpClient, nil)
+			debugErr := executeSingleTask(userList[0], httpClient, nil)
 			if debugErr != nil {
 				log.Fatal(debugErr)
-			} else {
-				fmt.Println("debug - talent:", talentObj)
 			}
-
 		} else {
 			executeStressTest(userList, httpClient)
 		}
@@ -103,7 +102,7 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 
 			user := userList[tmpIndex-1]
 
-			_, debugErr := executeSingleTask(user, httpClient, nil)
+			debugErr := executeSingleTask(user, httpClient, nil)
 			return debugErr
 		})
 	} else {
@@ -112,32 +111,26 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 
 			user := userList[tmpIndex-1]
 
-			_, debugErr := executeSingleTask(user, httpClient, ch)
+			debugErr := executeSingleTask(user, httpClient, ch)
 			return debugErr
 		})
 	}
 }
 
-func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<- *runner.TaskResult) (talentObj *talent.TalentObject, err error) {
+func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<- *runner.TaskResult) (err error) {
 	if httpClient == nil {
 		httpClient = NewHttpClientWithoutRedirect(false)
 	}
 
-	talentObj = talent.NewTalentObject(serverEndpoint)
+	talentObj := talent.NewTalentObject(serverEndpoint)
 
 	if stage == -1 {
 		t1 := time.Now()
 		err = talentObj.Status(httpClient)
-		d := time.Since(t1).Nanoseconds()
-		if ch != nil {
-			ch <- &runner.TaskResult{
-				Success:     err == nil,
-				ProcessTime: uint64(d),
-			}
-		}
+		enqueueMetrics(&t1, err, ch)
 
 		if err != nil {
-			return nil, err
+			return err
 		} else if debug {
 			fmt.Println("debug - status success")
 		}
@@ -149,16 +142,10 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	if stage == 0 || stage > i {
 		t1 := time.Now()
 		err = talentObj.SignIn(user, httpClient)
-		d := time.Since(t1).Nanoseconds()
-		if ch != nil {
-			ch <- &runner.TaskResult{
-				Success:     err == nil,
-				ProcessTime: uint64(d),
-			}
-		}
+		enqueueMetrics(&t1, err, ch)
 
 		if err != nil {
-			return nil, err
+			return err
 		} else if debug {
 			fmt.Println("debug - sign in success with cookie", talentObj.Cookie)
 		}
@@ -169,16 +156,10 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	if stage == 0 || stage > i {
 		t1 := time.Now()
 		err = talentObj.Information(httpClient)
-		d := time.Since(t1).Nanoseconds()
-		if ch != nil {
-			ch <- &runner.TaskResult{
-				Success:     err == nil,
-				ProcessTime: uint64(d),
-			}
-		}
+		enqueueMetrics(&t1, err, ch)
 
 		if err != nil {
-			return nil, err
+			return err
 		} else if debug {
 			fmt.Println("debug - information success", talentObj.UserId)
 		}
@@ -189,16 +170,10 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	if stage == 0 || stage > i {
 		t1 := time.Now()
 		err = talentObj.StartGame("competitive_math", httpClient)
-		d := time.Since(t1).Nanoseconds()
-		if ch != nil {
-			ch <- &runner.TaskResult{
-				Success:     err == nil,
-				ProcessTime: uint64(d),
-			}
-		}
+		enqueueMetrics(&t1, err, ch)
 
 		if err != nil {
-			return nil, err
+			return err
 		} else if debug {
 			fmt.Println("debug - start game success", talentObj.GameConfig)
 		}
@@ -206,10 +181,10 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 		i++
 	}
 
-	if stage == 0 || stage > i {
+	if game && (stage == 0 || stage > i) {
 		err = talentObj.PlayGame("competitive_math")
 		if err != nil {
-			return nil, err
+			return err
 		} else if debug {
 			fmt.Println("debug - play game success")
 		}
@@ -220,16 +195,10 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	if stage == 0 || stage > i {
 		t1 := time.Now()
 		err = talentObj.StopGame("competitive_math", httpClient)
-		d := time.Since(t1).Nanoseconds()
-		if ch != nil {
-			ch <- &runner.TaskResult{
-				Success:     err == nil,
-				ProcessTime: uint64(d),
-			}
-		}
+		enqueueMetrics(&t1, err, ch)
 
 		if err != nil {
-			return nil, err
+			return err
 		} else if debug {
 			fmt.Println("debug - stop game success")
 		}
@@ -238,4 +207,14 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	}
 
 	return
+}
+
+func enqueueMetrics(startTime *time.Time, err error, ch chan<- *runner.TaskResult) {
+	d := time.Since(*startTime).Nanoseconds()
+	if ch != nil {
+		ch <- &runner.TaskResult{
+			Success:     err == nil,
+			ProcessTime: uint64(d),
+		}
+	}
 }
