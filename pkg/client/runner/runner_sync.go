@@ -19,6 +19,11 @@ func runSingleTask(name string, taskFunc func() error) *TaskResult {
 	err := taskFunc()
 	endTime := time.Now()
 
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	}
+
 	processingTime := uint64(endTime.Sub(startTime).Nanoseconds())
 	return &TaskResult{
 		Success:     err == nil,
@@ -26,6 +31,7 @@ func runSingleTask(name string, taskFunc func() error) *TaskResult {
 		StartTime:   uint64(startTime.UnixNano()),
 		EndTime:     uint64(endTime.UnixNano()),
 		Category:    name,
+		Err:         errMsg,
 	}
 }
 

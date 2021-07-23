@@ -18,6 +18,7 @@ type StressTestClient struct {
 	Number        int
 	ConcurrentNum int
 	Limitation    int
+	EnableLogger  bool
 }
 
 func NewStressClient(number int, concurrent int, limitation int) *StressTestClient {
@@ -68,7 +69,7 @@ func (s *StressTestClient) runWithRateLimiterInternal(rateLimiter ratelimit.Limi
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
 
-	st := statistics.NewResultStatistics(s.ConcurrentNum)
+	st := statistics.NewResultStatistics(s.ConcurrentNum, s.EnableLogger)
 
 	wgStatistics.Add(1)
 	go st.Watch(ch, wgStatistics)

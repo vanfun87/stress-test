@@ -11,6 +11,7 @@ type TaskResult struct {
 	ProcessTime uint64
 	Success     bool
 	Category    string
+	Err         string
 }
 
 type SerialTaskResult struct {

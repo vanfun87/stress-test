@@ -2,11 +2,32 @@ package statistics
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
+	log "github.com/sirupsen/logrus"
 )
+
+const logFilepath = "./stress-test.log"
+
+func initLogger(enableLogger bool) {
+	if !enableLogger {
+		return
+	}
+
+	log.SetFormatter(&log.JSONFormatter{})
+
+	var file, err = os.OpenFile(logFilepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Println("Could Not Open Log File : " + err.Error())
+	}
+
+	log.SetOutput(file)
+
+	log.SetLevel(log.InfoLevel)
+}
 
 type ResultStatistics struct {
 	ConcurrentNum int
@@ -17,9 +38,12 @@ type ResultStatistics struct {
 	MinTime,
 	RunningTime,
 	ProcessTime uint64
+	EnableLogger bool
 }
 
-func NewResultStatistics(concurrentNum int) *ResultStatistics {
+func NewResultStatistics(concurrentNum int, enableLogger bool) *ResultStatistics {
+	initLogger(enableLogger)
+
 	if concurrentNum == 0 {
 		concurrentNum = 1
 	}
@@ -33,6 +57,7 @@ func NewResultStatistics(concurrentNum int) *ResultStatistics {
 		MinTime:       0,
 		RunningTime:   0,
 		ProcessTime:   0,
+		EnableLogger:  enableLogger,
 	}
 }
 
@@ -57,6 +82,9 @@ func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult, wg *sync.WaitGrou
 	s.PrintTableHeader()
 	for r := range ch {
 		s.Append(r)
+		if s.EnableLogger {
+			log.Info(r)
+		}
 	}
 
 	stopCh <- true

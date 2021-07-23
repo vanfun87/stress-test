@@ -1,6 +1,7 @@
 package talent
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/ginkgoch/stress-test/pkg/talent/game"
@@ -11,6 +12,15 @@ type TalentObject struct {
 	UserId          string
 	Cookie          *http.Cookie
 	GameConfig      *game.GameConfig
+}
+
+func (t *TalentObject) String() string {
+	s := fmt.Sprintln()
+	s += fmt.Sprintln("ServiceEndpoint:", t.ServiceEndpoint)
+	s += fmt.Sprintln("UserId:", t.UserId)
+	s += fmt.Sprintln("Cookie:", t.Cookie)
+	s += fmt.Sprintln("GameConfig:", t.GameConfig)
+	return s
 }
 
 type Information struct {

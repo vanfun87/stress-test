@@ -25,6 +25,7 @@ var (
 	stage          int
 	useQps         bool
 	game           bool
+	enableLogger   bool
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
 	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
+	toCmd.PersistentFlags().BoolVarP(&enableLogger, "log", "o", false, "-o, default false")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
@@ -90,6 +92,7 @@ var toCmd = &cobra.Command{
 
 func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 	s := client.NewStressClientWithConcurrentNumber(1, len(userList))
+	s.EnableLogger = enableLogger
 
 	rateLimiter := ratelimit.New(limit)
 	var index uint32 = 0
@@ -126,7 +129,7 @@ func executeSingleStep(i int, action string, talentObj *talent.TalentObject, ch 
 		if err != nil {
 			return i, err
 		} else if debug {
-			fmt.Printf("debug - %s success: %v\n", action, talentObj)
+			fmt.Printf("debug - %s success: %v\n", action, talentObj.String())
 		}
 
 		i++
@@ -198,13 +201,20 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 func enqueueMetrics(name string, startTime *time.Time, err error, ch chan<- *runner.TaskResult) {
 	endTime := time.Now()
 	d := endTime.Sub(*startTime).Nanoseconds()
+
 	if ch != nil {
+		errMsg := ""
+		if err != nil {
+			errMsg = err.Error()
+		}
+
 		ch <- &runner.TaskResult{
 			Success:     err == nil,
 			ProcessTime: uint64(d),
 			StartTime:   uint64(startTime.UnixNano()),
 			EndTime:     uint64(endTime.UnixNano()),
 			Category:    name,
+			Err:         errMsg,
 		}
 	}
 }
