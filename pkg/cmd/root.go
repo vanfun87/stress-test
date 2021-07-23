@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ginkgoch/stress-test/pkg/client/statistics"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +18,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&keepAlive, "keepAlive", "k", "true", "true|t|1 or false|f|0")
+	rootCmd.PersistentFlags().BoolVarP(&statistics.EnableLogger, "log", "o", false, "-o, default false")
 }
 
 func Execute() {

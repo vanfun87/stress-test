@@ -26,7 +26,6 @@ var (
 	stage          int
 	useQps         bool
 	game           bool
-	enableLogger   bool
 )
 
 func init() {
@@ -37,7 +36,6 @@ func init() {
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
 	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
-	toCmd.PersistentFlags().BoolVarP(&enableLogger, "log", "o", false, "-o, default false")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
@@ -93,7 +91,6 @@ var toCmd = &cobra.Command{
 
 func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 	s := client.NewStressClientWithConcurrentNumber(1, len(userList))
-	s.EnableLogger = enableLogger
 
 	rateLimiter := ratelimit.New(limit)
 	var index uint32 = 0

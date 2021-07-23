@@ -10,10 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const logFilepath = "./stress-test.log"
+var (
+	logFilepath  = "./stress-test.log"
+	EnableLogger bool
+)
 
-func initLogger(enableLogger bool) {
-	if !enableLogger {
+func initLogger() {
+	if !EnableLogger {
 		return
 	}
 
@@ -38,11 +41,10 @@ type ResultStatistics struct {
 	MinTime,
 	RunningTime,
 	ProcessTime uint64
-	EnableLogger bool
 }
 
-func NewResultStatistics(concurrentNum int, enableLogger bool) *ResultStatistics {
-	initLogger(enableLogger)
+func NewResultStatistics(concurrentNum int) *ResultStatistics {
+	initLogger()
 
 	if concurrentNum == 0 {
 		concurrentNum = 1
@@ -57,7 +59,6 @@ func NewResultStatistics(concurrentNum int, enableLogger bool) *ResultStatistics
 		MinTime:       0,
 		RunningTime:   0,
 		ProcessTime:   0,
-		EnableLogger:  enableLogger,
 	}
 }
 
@@ -82,7 +83,7 @@ func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult, wg *sync.WaitGrou
 	s.PrintTableHeader()
 	for r := range ch {
 		s.Append(r)
-		if s.EnableLogger {
+		if EnableLogger {
 			log.Info(r)
 		}
 	}
