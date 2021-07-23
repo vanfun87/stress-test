@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"sync/atomic"
@@ -173,6 +174,9 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	}
 
 	if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
+		rand.Seed(time.Now().UnixNano())
+		sleeping := rand.Intn(4000) + 1000
+		time.Sleep(time.Duration(sleeping) * time.Millisecond)
 		return talentObj.StartGame("competitive_math", httpClient)
 	}); err != nil {
 		return
@@ -190,6 +194,8 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	}
 
 	if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
+		sleeping := rand.Intn(1000) + 500
+		time.Sleep(time.Duration(sleeping) * time.Millisecond)
 		return talentObj.StopGame("competitive_math", httpClient)
 	}); err != nil {
 		return
