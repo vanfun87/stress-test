@@ -97,7 +97,7 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 	s.Header()
 
 	if !useQps {
-		s.RunSingleTaskWithRateLimiter(rateLimiter, func() error {
+		s.RunSingleTaskWithRateLimiter("talent", rateLimiter, func() error {
 			tmpIndex := atomic.AddUint32(&index, 1)
 
 			user := userList[tmpIndex-1]
@@ -106,7 +106,7 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 			return debugErr
 		})
 	} else {
-		s.RunMultiTasksWithRateLimiter(rateLimiter, func(ch chan<- *runner.TaskResult) error {
+		s.RunMultiTasksWithRateLimiter("talent", rateLimiter, func(ch chan<- *runner.TaskResult) error {
 			tmpIndex := atomic.AddUint32(&index, 1)
 
 			user := userList[tmpIndex-1]
@@ -121,7 +121,7 @@ func executeSingleStep(i int, action string, talentObj *talent.TalentObject, ch 
 	if stage == 0 || stage > i {
 		t1 := time.Now()
 		err := handler()
-		enqueueMetrics(&t1, err, ch)
+		enqueueMetrics(action, &t1, err, ch)
 
 		if err != nil {
 			return i, err
@@ -145,7 +145,7 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	if stage == -1 {
 		t1 := time.Now()
 		err = talentObj.Status(httpClient)
-		enqueueMetrics(&t1, err, ch)
+		enqueueMetrics("status", &t1, err, ch)
 
 		if err != nil {
 			return err
@@ -157,7 +157,7 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	}
 
 	i := 0
-	if i, err = executeSingleStep(i, "sign in", talentObj, ch, func() error {
+	if i, err = executeSingleStep(i, "sign-in", talentObj, ch, func() error {
 		return talentObj.SignIn(user, httpClient)
 	}); err != nil {
 		return
@@ -169,7 +169,7 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 		return
 	}
 
-	if i, err = executeSingleStep(i, "start game", talentObj, ch, func() error {
+	if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
 		return talentObj.StartGame("competitive_math", httpClient)
 	}); err != nil {
 		return
@@ -186,7 +186,7 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 		i++
 	}
 
-	if _, err = executeSingleStep(i, "stop game", talentObj, ch, func() error {
+	if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
 		return talentObj.StopGame("competitive_math", httpClient)
 	}); err != nil {
 		return
@@ -195,12 +195,16 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	return
 }
 
-func enqueueMetrics(startTime *time.Time, err error, ch chan<- *runner.TaskResult) {
-	d := time.Since(*startTime).Nanoseconds()
+func enqueueMetrics(name string, startTime *time.Time, err error, ch chan<- *runner.TaskResult) {
+	endTime := time.Now()
+	d := endTime.Sub(*startTime).Nanoseconds()
 	if ch != nil {
 		ch <- &runner.TaskResult{
 			Success:     err == nil,
 			ProcessTime: uint64(d),
+			StartTime:   uint64(startTime.UnixNano()),
+			EndTime:     uint64(endTime.UnixNano()),
+			Category:    name,
 		}
 	}
 }

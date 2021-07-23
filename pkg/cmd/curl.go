@@ -37,7 +37,7 @@ var curlCmd = &cobra.Command{
 		s := client.NewStressClientWithConcurrentNumber(requestCount, concurrentCount)
 
 		s.Header()
-		s.Run(func() error {
+		s.Run("curl", func() error {
 			request, _ := http.NewRequest(requestVerb, args[0], nil)
 
 			if len(headers) > 0 {

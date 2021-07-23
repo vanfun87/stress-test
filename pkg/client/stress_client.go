@@ -47,17 +47,17 @@ func (s *StressTestClient) Header() {
 	fmt.Println()
 }
 
-func (s *StressTestClient) Run(taskFunc func() error) {
-	s.RunSingleTaskWithRateLimiter(nil, taskFunc)
+func (s *StressTestClient) Run(name string, taskFunc func() error) {
+	s.RunSingleTaskWithRateLimiter(name, nil, taskFunc)
 }
 
-func (s *StressTestClient) RunSingleTaskWithRateLimiter(rateLimiter ratelimit.Limiter, taskFunc func() error) {
+func (s *StressTestClient) RunSingleTaskWithRateLimiter(name string, rateLimiter ratelimit.Limiter, taskFunc func() error) {
 	s.runWithRateLimiterInternal(rateLimiter, func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult) {
-		runner.RunSync(s.Number, ch, wg, taskFunc)
+		runner.RunSync(name, s.Number, ch, wg, taskFunc)
 	})
 }
 
-func (s *StressTestClient) RunMultiTasksWithRateLimiter(rateLimiter ratelimit.Limiter, taskFunc func(ch chan<- *runner.TaskResult) error) {
+func (s *StressTestClient) RunMultiTasksWithRateLimiter(name string, rateLimiter ratelimit.Limiter, taskFunc func(ch chan<- *runner.TaskResult) error) {
 	s.runWithRateLimiterInternal(rateLimiter, func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult) {
 		runner.RunSyncWithMultiTasks(s.Number, ch, wg, taskFunc)
 	})

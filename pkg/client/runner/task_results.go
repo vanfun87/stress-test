@@ -6,8 +6,11 @@ import (
 )
 
 type TaskResult struct {
-	Success     bool
+	StartTime   uint64
+	EndTime     uint64
 	ProcessTime uint64
+	Success     bool
+	Category    string
 }
 
 type SerialTaskResult struct {
