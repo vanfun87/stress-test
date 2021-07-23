@@ -117,6 +117,24 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 	}
 }
 
+func executeSingleStep(i int, action string, talentObj *talent.TalentObject, ch chan<- *runner.TaskResult, handler func() error) (int, error) {
+	if stage == 0 || stage > i {
+		t1 := time.Now()
+		err := handler()
+		enqueueMetrics(&t1, err, ch)
+
+		if err != nil {
+			return i, err
+		} else if debug {
+			fmt.Printf("debug - %s success: %v\n", action, talentObj)
+		}
+
+		i++
+	}
+
+	return i, nil
+}
+
 func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<- *runner.TaskResult) (err error) {
 	if httpClient == nil {
 		httpClient = NewHttpClientWithoutRedirect(false)
@@ -132,53 +150,29 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 		if err != nil {
 			return err
 		} else if debug {
-			fmt.Println("debug - status success")
+			fmt.Printf("debug - status success")
 		}
 
 		return
 	}
 
 	i := 0
-	if stage == 0 || stage > i {
-		t1 := time.Now()
-		err = talentObj.SignIn(user, httpClient)
-		enqueueMetrics(&t1, err, ch)
-
-		if err != nil {
-			return err
-		} else if debug {
-			fmt.Println("debug - sign in success with cookie", talentObj.Cookie)
-		}
-
-		i++
+	if i, err = executeSingleStep(i, "sign in", talentObj, ch, func() error {
+		return talentObj.SignIn(user, httpClient)
+	}); err != nil {
+		return
 	}
 
-	if stage == 0 || stage > i {
-		t1 := time.Now()
-		err = talentObj.Information(httpClient)
-		enqueueMetrics(&t1, err, ch)
-
-		if err != nil {
-			return err
-		} else if debug {
-			fmt.Println("debug - information success", talentObj.UserId)
-		}
-
-		i++
+	if i, err = executeSingleStep(i, "information", talentObj, ch, func() error {
+		return talentObj.Information(httpClient)
+	}); err != nil {
+		return
 	}
 
-	if stage == 0 || stage > i {
-		t1 := time.Now()
-		err = talentObj.StartGame("competitive_math", httpClient)
-		enqueueMetrics(&t1, err, ch)
-
-		if err != nil {
-			return err
-		} else if debug {
-			fmt.Println("debug - start game success", talentObj.GameConfig)
-		}
-
-		i++
+	if i, err = executeSingleStep(i, "start game", talentObj, ch, func() error {
+		return talentObj.StartGame("competitive_math", httpClient)
+	}); err != nil {
+		return
 	}
 
 	if game && (stage == 0 || stage > i) {
@@ -192,18 +186,10 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 		i++
 	}
 
-	if stage == 0 || stage > i {
-		t1 := time.Now()
-		err = talentObj.StopGame("competitive_math", httpClient)
-		enqueueMetrics(&t1, err, ch)
-
-		if err != nil {
-			return err
-		} else if debug {
-			fmt.Println("debug - stop game success")
-		}
-
-		i++
+	if _, err = executeSingleStep(i, "stop game", talentObj, ch, func() error {
+		return talentObj.StopGame("competitive_math", httpClient)
+	}); err != nil {
+		return
 	}
 
 	return
