@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -19,22 +19,24 @@ import (
 )
 
 var (
-	filepath string
-	limit    int
-	debug    bool
-	stage    int
-	useQps   bool
-	game     bool
+	filepath           string
+	limit              int
+	debug              bool
+	stage              int
+	useQps             bool
+	game               bool
+	storeTalentObjects bool
 )
 
 func init() {
-	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
+	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>[.talent].json")
 	toCmd.PersistentFlags().StringVarP(&talent.ServiceEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndpoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
 	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
+	toCmd.PersistentFlags().BoolVarP(&storeTalentObjects, "storeTalentObjects", "s", false, "-s, default false")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
@@ -61,9 +63,17 @@ var toCmd = &cobra.Command{
 			log.Fatalf("open file failed - %v\n", err)
 		}
 
-		var userList []map[string]string
+		var userList []*talent.TalentObject
+		if strings.HasSuffix(filepath, ".talent.json") {
+			json.Unmarshal(fileBuffer, &userList)
+		} else if strings.HasSuffix(filepath, ".json") {
+			var signInConfigs []talent.SignInConfig
+			json.Unmarshal(fileBuffer, &signInConfigs)
 
-		json.Unmarshal(fileBuffer, &userList)
+			for i := 0; i < len(signInConfigs); i++ {
+				userList = append(userList, &talent.TalentObject{SignInConfig: &signInConfigs[i]})
+			}
+		}
 
 		userLength := len(userList)
 		if userLength == 0 {
@@ -85,27 +95,47 @@ var toCmd = &cobra.Command{
 		} else {
 			executeStressTest(userList, httpClient)
 		}
+
+		if storeTalentObjects {
+			userJsonData, err := json.Marshal(userList)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			talentObjFilepath := strings.Replace(filepath, ".json", ".talent.json", -1)
+			_, err = os.Stat(talentObjFilepath)
+
+			if err == nil {
+				os.Remove(talentObjFilepath)
+			} else if err != nil && !os.IsNotExist(err) {
+				log.Fatal(err)
+			}
+
+			ioutil.WriteFile(talentObjFilepath, userJsonData, 0777)
+		}
 	},
 }
 
-func executeStressTest(userList []map[string]string, httpClient *http.Client) {
+func executeStressTest(userList []*talent.TalentObject, httpClient *http.Client) {
 	s := client.NewStressClientWithConcurrentNumber(1, len(userList))
 
 	rateLimiter := ratelimit.New(limit)
 	var index uint32 = 0
 
 	s.Header()
-
-	tmpIndex := atomic.AddUint32(&index, 1)
-	user := userList[tmpIndex-1]
-
 	if !useQps {
 		s.RunSingleTaskWithRateLimiter("talent", rateLimiter, func() error {
+			tmpIndex := atomic.AddUint32(&index, 1)
+			user := userList[tmpIndex-1]
+
 			debugErr := executeSingleTask(user, httpClient, nil)
 			return debugErr
 		})
 	} else {
 		s.RunMultiTasksWithRateLimiter("talent", rateLimiter, func(ch chan<- *runner.TaskResult) error {
+			tmpIndex := atomic.AddUint32(&index, 1)
+			user := userList[tmpIndex-1]
+
 			debugErr := executeSingleTask(user, httpClient, ch)
 			return debugErr
 		})
@@ -130,12 +160,12 @@ func executeSingleStep(i int, action string, talentObj *talent.TalentObject, ch 
 	return i, nil
 }
 
-func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<- *runner.TaskResult) (err error) {
+func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch chan<- *runner.TaskResult) (err error) {
 	if httpClient == nil {
 		httpClient = NewHttpClientWithoutRedirect(false)
 	}
 
-	talentObj := talent.NewTalentObject()
+	talentObj := user //talent.NewTalentObject()
 
 	if stage == -1 {
 		t1 := time.Now()
@@ -152,22 +182,30 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	}
 
 	i := 0
-	if i, err = executeSingleStep(i, "sign-in", talentObj, ch, func() error {
-		return talentObj.SignIn(user, httpClient)
-	}); err != nil {
-		return
+	if talentObj.Cookie == nil {
+		if i, err = executeSingleStep(i, "sign-in", talentObj, ch, func() error {
+			return talentObj.SignIn(httpClient)
+		}); err != nil {
+			return
+		}
+	} else {
+		i++
 	}
 
-	if i, err = executeSingleStep(i, "information", talentObj, ch, func() error {
-		return talentObj.Information(httpClient)
-	}); err != nil {
-		return
+	if talentObj.UserId == "" {
+		if i, err = executeSingleStep(i, "information", talentObj, ch, func() error {
+			return talentObj.Information(httpClient)
+		}); err != nil {
+			return
+		}
+	} else {
+		i++
 	}
 
 	if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
-		rand.Seed(time.Now().UnixNano())
-		sleeping := rand.Intn(4000) + 1000
-		time.Sleep(time.Duration(sleeping) * time.Millisecond)
+		// rand.Seed(time.Now().UnixNano())
+		// sleeping := rand.Intn(4000) + 1000
+		// time.Sleep(time.Duration(sleeping) * time.Millisecond)
 		return talentObj.StartGame("competitive_math", httpClient)
 	}); err != nil {
 		return
@@ -185,8 +223,8 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 	}
 
 	if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
-		sleeping := rand.Intn(1000) + 500
-		time.Sleep(time.Duration(sleeping) * time.Millisecond)
+		// sleeping := rand.Intn(1000) + 500
+		// time.Sleep(time.Duration(sleeping) * time.Millisecond)
 		return talentObj.StopGame("competitive_math", httpClient)
 	}); err != nil {
 		return

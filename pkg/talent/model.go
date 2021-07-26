@@ -8,9 +8,37 @@ import (
 )
 
 type TalentObject struct {
-	UserId     string
-	Cookie     *http.Cookie
-	GameConfig *game.GameConfig
+	UserId       string
+	Cookie       *http.Cookie
+	GameConfig   *game.GameConfig
+	SignInConfig *SignInConfig
+}
+
+type SignInConfig struct {
+	PhoneNumber   string `json:"phoneNumber"`
+	Name          string `json:"name"`
+	UserId        string `json:"userId"`
+	OrgName       string `json:"orgName"`
+	OrgCode       string `json:"orgCode"`
+	MajorName     string `json:"majorName"`
+	UserType      string `json:"userType"`
+	SchoolName    string `json:"schoolName"`
+	Authorization string `json:"authorization"`
+}
+
+func (c *SignInConfig) AsMap() map[string]string {
+	confMap := make(map[string]string)
+	confMap["phoneNumber"] = c.PhoneNumber
+	confMap["name"] = c.Name
+	confMap["userId"] = c.UserId
+	confMap["orgName"] = c.OrgName
+	confMap["orgCode"] = c.OrgCode
+	confMap["majorName"] = c.MajorName
+	confMap["userType"] = c.UserType
+	confMap["schoolName"] = c.SchoolName
+	confMap["authorization"] = c.Authorization
+
+	return confMap
 }
 
 func (t *TalentObject) String() string {

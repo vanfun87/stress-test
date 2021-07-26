@@ -39,7 +39,11 @@ func (talent *TalentObject) Status(httpClient *http.Client) error {
 	return err
 }
 
-func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Client) error {
+func (talent *TalentObject) SignIn(httpClient *http.Client) error {
+	// if talent.Cookie != nil {
+	// 	return nil
+	// }
+
 	request, err := http.NewRequest("GET", talent.formalizeUrl(signInUrl), nil)
 	if err != nil {
 		return err
@@ -48,13 +52,14 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 	request.Header.Set("x-forwarded-proto", "https")
 
 	query := request.URL.Query()
+
+	user := talent.SignInConfig.AsMap()
 	for key := range user {
 		query.Add(key, user[key])
 	}
 	query.Add("accessId", "111111")
 
 	request.URL.RawQuery = query.Encode()
-
 	res, err := httpClient.Do(request)
 	if err != nil {
 		return err
@@ -77,6 +82,10 @@ func (talent *TalentObject) SignIn(user map[string]string, httpClient *http.Clie
 }
 
 func (talent *TalentObject) Information(httpClient *http.Client) error {
+	// if talent.UserId != "" {
+	// 	return nil
+	// }
+
 	request, err := http.NewRequest("GET", talent.formalizeUrl(informationUrl), nil)
 	request.AddCookie(talent.Cookie)
 	if err != nil {
