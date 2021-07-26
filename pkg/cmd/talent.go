@@ -19,18 +19,17 @@ import (
 )
 
 var (
-	filepath       string
-	limit          int
-	serverEndpoint string
-	debug          bool
-	stage          int
-	useQps         bool
-	game           bool
+	filepath string
+	limit    int
+	debug    bool
+	stage    int
+	useQps   bool
+	game     bool
 )
 
 func init() {
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>.json")
-	toCmd.PersistentFlags().StringVarP(&serverEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndPoint, "https://talent.test.moblab-us.cn/api/1")
+	toCmd.PersistentFlags().StringVarP(&talent.ServiceEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndpoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
@@ -97,21 +96,16 @@ func executeStressTest(userList []map[string]string, httpClient *http.Client) {
 
 	s.Header()
 
+	tmpIndex := atomic.AddUint32(&index, 1)
+	user := userList[tmpIndex-1]
+
 	if !useQps {
 		s.RunSingleTaskWithRateLimiter("talent", rateLimiter, func() error {
-			tmpIndex := atomic.AddUint32(&index, 1)
-
-			user := userList[tmpIndex-1]
-
 			debugErr := executeSingleTask(user, httpClient, nil)
 			return debugErr
 		})
 	} else {
 		s.RunMultiTasksWithRateLimiter("talent", rateLimiter, func(ch chan<- *runner.TaskResult) error {
-			tmpIndex := atomic.AddUint32(&index, 1)
-
-			user := userList[tmpIndex-1]
-
 			debugErr := executeSingleTask(user, httpClient, ch)
 			return debugErr
 		})
@@ -141,7 +135,7 @@ func executeSingleTask(user map[string]string, httpClient *http.Client, ch chan<
 		httpClient = NewHttpClientWithoutRedirect(false)
 	}
 
-	talentObj := talent.NewTalentObject(serverEndpoint)
+	talentObj := talent.NewTalentObject()
 
 	if stage == -1 {
 		t1 := time.Now()

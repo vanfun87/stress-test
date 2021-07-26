@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DefaultServiceEndPoint = "https://talent.test.moblab-us.cn/api/1"
+	DefaultServiceEndpoint = "https://talent.test.moblab-us.cn/api/1"
 	// DefaultServiceEndPoint = "http://talent:3000/api/1"
 	signInUrl      = "/zhilian/login"
 	informationUrl = "/student/information?ignoreTrait=true"
@@ -21,12 +21,12 @@ const (
 	finishGameUrl  = "/game/finish/%s"
 )
 
-func NewTalentObject(serviceEndpoint string) *TalentObject {
-	if serviceEndpoint == "" {
-		serviceEndpoint = DefaultServiceEndPoint
-	}
+var (
+	ServiceEndpoint string
+)
 
-	return &TalentObject{ServiceEndpoint: serviceEndpoint}
+func NewTalentObject() *TalentObject {
+	return new(TalentObject)
 }
 
 func (talent *TalentObject) Status(httpClient *http.Client) error {
@@ -169,5 +169,5 @@ func (talent *TalentObject) PlayGame(gameId string) (err error) {
 }
 
 func (talent *TalentObject) formalizeUrl(url string) string {
-	return fmt.Sprintf("%s%s", talent.ServiceEndpoint, url)
+	return fmt.Sprintf("%s%s", ServiceEndpoint, url)
 }

@@ -8,15 +8,13 @@ import (
 )
 
 type TalentObject struct {
-	ServiceEndpoint string
-	UserId          string
-	Cookie          *http.Cookie
-	GameConfig      *game.GameConfig
+	UserId     string
+	Cookie     *http.Cookie
+	GameConfig *game.GameConfig
 }
 
 func (t *TalentObject) String() string {
 	s := fmt.Sprintln()
-	s += fmt.Sprintln("ServiceEndpoint:", t.ServiceEndpoint)
 	s += fmt.Sprintln("UserId:", t.UserId)
 	s += fmt.Sprintln("Cookie:", t.Cookie)
 	s += fmt.Sprintln("GameConfig:", t.GameConfig)
