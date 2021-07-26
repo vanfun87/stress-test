@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -26,13 +27,17 @@ var (
 	useQps             bool
 	game               bool
 	storeTalentObjects bool
+	delay              int
 )
 
 func init() {
+	rand.Seed(time.Now().UnixNano())
+
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>[.talent].json")
 	toCmd.PersistentFlags().StringVarP(&talent.ServiceEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndpoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
+	toCmd.PersistentFlags().IntVarP(&delay, "delay", "", 0, "--delay <ms>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
 	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
@@ -203,9 +208,7 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 	}
 
 	if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
-		// rand.Seed(time.Now().UnixNano())
-		// sleeping := rand.Intn(4000) + 1000
-		// time.Sleep(time.Duration(sleeping) * time.Millisecond)
+		processDelay()
 		return talentObj.StartGame("competitive_math", httpClient)
 	}); err != nil {
 		return
@@ -223,14 +226,20 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 	}
 
 	if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
-		// sleeping := rand.Intn(1000) + 500
-		// time.Sleep(time.Duration(sleeping) * time.Millisecond)
+		processDelay()
 		return talentObj.StopGame("competitive_math", httpClient)
 	}); err != nil {
 		return
 	}
 
 	return
+}
+
+func processDelay() {
+	if delay > 0 {
+		sleeping := delay + rand.Intn(1000)
+		time.Sleep(time.Duration(sleeping) * time.Millisecond)
+	}
 }
 
 func enqueueMetrics(name string, startTime *time.Time, err error, ch chan<- *runner.TaskResult) {
