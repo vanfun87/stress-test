@@ -41,6 +41,7 @@ type ResultStatistics struct {
 	MinTime,
 	RunningTime,
 	ProcessTime uint64
+	locker sync.RWMutex
 }
 
 func NewResultStatistics(concurrentNum int) *ResultStatistics {
@@ -93,6 +94,9 @@ func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult, wg *sync.WaitGrou
 }
 
 func (s *ResultStatistics) Append(r *runner.TaskResult) {
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
 	s.ProcessTime += r.ProcessTime
 	s.RunningTime = uint64(time.Now().UnixNano()) - s.StartTime
 
@@ -118,6 +122,9 @@ func (s *ResultStatistics) PrintTableHeader() {
 }
 
 func (s *ResultStatistics) PrintTableRow() {
+	s.locker.RLock()
+	defer s.locker.RUnlock()
+
 	processTime := s.ProcessTime
 	if processTime == 0 {
 		processTime = 1
