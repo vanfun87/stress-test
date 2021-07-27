@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	debug     bool
 	keepAlive string
 	limit     int
 )
@@ -22,6 +23,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	rootCmd.PersistentFlags().StringVarP(&keepAlive, "keepAlive", "k", "true", "true|t|1 or false|f|0")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	rootCmd.PersistentFlags().BoolVarP(&statistics.EnableLogger, "log", "o", false, "-o, default false")
 }
 

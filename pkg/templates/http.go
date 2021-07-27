@@ -26,7 +26,7 @@ func HttpGet(request *http.Request, client *http.Client) error {
 	return nil
 }
 
-func SendRequest(request *http.Request, client *http.Client, handler func(*http.Response)) ([]byte, error) {
+func SendRequest(request *http.Request, client *http.Client) ([]byte, error) {
 	res, err := client.Do(request)
 	if err != nil {
 		return nil, err

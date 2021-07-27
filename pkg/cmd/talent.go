@@ -21,7 +21,6 @@ import (
 
 var (
 	filepath           string
-	debug              bool
 	stage              int
 	useQps             bool
 	game               bool
@@ -31,12 +30,10 @@ var (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-
+	toCmd.PersistentFlags().IntVarP(&delay, "delay", "", 0, "--delay <ms>, default 0")
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>[.talent].json")
 	toCmd.PersistentFlags().StringVarP(&talent.ServiceEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndpoint, "https://talent.test.moblab-us.cn/api/1")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
-	toCmd.PersistentFlags().IntVarP(&delay, "delay", "", 0, "--delay <ms>, default 0")
-	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
 	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
 	toCmd.PersistentFlags().BoolVarP(&storeTalentObjects, "storeTalentObjects", "s", false, "-s, default false")

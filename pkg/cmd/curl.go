@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -35,26 +37,44 @@ var curlCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		httpClient := NewHttpClient(ParseBool(keepAlive))
 
-		s := client.NewStressClientWithConcurrentNumber(requestCount, concurrentCount)
+		if debug {
+			runDebugTest(args, httpClient)
+		} else {
+			runStressTest(args, httpClient)
+		}
+	},
+}
 
-		var rateLimiter ratelimit.Limiter
-		if limit > 0 {
-			rateLimiter = ratelimit.New(limit)
+func runStressTest(args []string, httpClient *http.Client) {
+	s := client.NewStressClientWithConcurrentNumber(requestCount, concurrentCount)
+
+	var rateLimiter ratelimit.Limiter
+	if limit > 0 {
+		rateLimiter = ratelimit.New(limit)
+	}
+
+	s.Header()
+	s.RunSingleTaskWithRateLimiter("curl", rateLimiter, func() error {
+		request, _ := http.NewRequest(requestVerb, args[0], nil)
+
+		if len(headers) > 0 {
+			for _, header := range headers {
+				segs := strings.Split(header, "=")
+				request.Header.Set(segs[0], segs[1])
+			}
 		}
 
-		s.Header()
-		s.RunSingleTaskWithRateLimiter("curl", rateLimiter, func() error {
-			request, _ := http.NewRequest(requestVerb, args[0], nil)
+		err := templates.HttpGet(request, httpClient)
+		return err
+	})
+}
 
-			if len(headers) > 0 {
-				for _, header := range headers {
-					segs := strings.Split(header, "=")
-					request.Header.Set(segs[0], segs[1])
-				}
-			}
+func runDebugTest(args []string, httpClient *http.Client) {
+	request, _ := http.NewRequest(requestVerb, args[0], nil)
+	data, err := templates.SendRequest(request, httpClient)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-			err := templates.HttpGet(request, httpClient)
-			return err
-		})
-	},
+	fmt.Println(string(data))
 }
