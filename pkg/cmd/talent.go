@@ -21,7 +21,6 @@ import (
 
 var (
 	filepath           string
-	limit              int
 	debug              bool
 	stage              int
 	useQps             bool
@@ -35,7 +34,6 @@ func init() {
 
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>[.talent].json")
 	toCmd.PersistentFlags().StringVarP(&talent.ServiceEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndpoint, "https://talent.test.moblab-us.cn/api/1")
-	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
 	toCmd.PersistentFlags().IntVarP(&delay, "delay", "", 0, "--delay <ms>, default 0")
 	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
@@ -124,9 +122,13 @@ var toCmd = &cobra.Command{
 func executeStressTest(userList []*talent.TalentObject, httpClient *http.Client) {
 	s := client.NewStressClientWithConcurrentNumber(1, len(userList))
 
-	rateLimiter := ratelimit.New(limit)
-	var index uint32 = 0
+	var rateLimiter ratelimit.Limiter
 
+	if limit > 0 {
+		rateLimiter = ratelimit.New(limit)
+	}
+
+	var index uint32 = 0
 	s.Header()
 	if !useQps {
 		s.RunSingleTaskWithRateLimiter("talent", rateLimiter, func() error {

@@ -7,6 +7,7 @@ import (
 	"github.com/ginkgoch/stress-test/pkg/client"
 	"github.com/ginkgoch/stress-test/pkg/templates"
 	"github.com/spf13/cobra"
+	"go.uber.org/ratelimit"
 )
 
 var (
@@ -36,8 +37,13 @@ var curlCmd = &cobra.Command{
 
 		s := client.NewStressClientWithConcurrentNumber(requestCount, concurrentCount)
 
+		var rateLimiter ratelimit.Limiter
+		if limit > 0 {
+			rateLimiter = ratelimit.New(limit)
+		}
+
 		s.Header()
-		s.Run("curl", func() error {
+		s.RunSingleTaskWithRateLimiter("curl", rateLimiter, func() error {
 			request, _ := http.NewRequest(requestVerb, args[0], nil)
 
 			if len(headers) > 0 {

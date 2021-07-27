@@ -8,7 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var keepAlive string
+var (
+	keepAlive string
+	limit     int
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "stress-test",
@@ -17,6 +20,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	rootCmd.PersistentFlags().StringVarP(&keepAlive, "keepAlive", "k", "true", "true|t|1 or false|f|0")
 	rootCmd.PersistentFlags().BoolVarP(&statistics.EnableLogger, "log", "o", false, "-o, default false")
 }
