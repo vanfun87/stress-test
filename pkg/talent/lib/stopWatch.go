@@ -14,7 +14,7 @@ type StopWatch struct {
 }
 
 func NewStopWatch(userid string) StopWatch {
-	return StopWatch{timeMap: map[string]time.Time{}, user: userid, printFile: true}
+	return StopWatch{timeMap: map[string]time.Time{}, user: userid, printFile: false}
 }
 func getFileAndLine(depth int) (file string) {
 	_, file, line, ok := runtime.Caller(depth)

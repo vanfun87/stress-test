@@ -21,6 +21,7 @@ type GameClient struct {
 	wsClient   *WebsocketClient
 	stopWatch  *lib.StopWatch
 	Delay      int
+	WorkPools  *lib.DelayWorkPools
 }
 
 ////NewGameClient  new a GameClient
@@ -42,13 +43,18 @@ func NewGameClient(config *GameConfig, player GamePlayer) *GameClient {
 
 	wsUrl := fmt.Sprintf("wss://%s/game-server/cometd", config.WebSocketHost())
 	fmt.Println("ws server", wsUrl)
+
 	gc := GameClient{
 		userID:     config.PlayerID,
 		roomID:     config.RoomID,
 		gamePlayer: player,
 		wsClient:   NewWebsocketClient(wsUrl, config.PlayerID),
 		stopWatch:  &stopwatch,
+		WorkPools:  &lib.DelayWorkPools{DelayWorkChan: []chan *lib.DelayWork{}},
 	}
+
+	gc.WorkPools.InitWorkPools(10)
+	gc.WorkPools.RunDelayWorkPool()
 	return &gc
 }
 
@@ -205,7 +211,7 @@ func (g *GameClient) close() {
 //SendActionDelay send action,  delay second
 func (g *GameClient) SendActionDelay(action Action, round int, delay int) {
 	g.Delay += delay
-	lib.SendWork(func() {
+	g.WorkPools.SendWork(func() {
 		g.SendAction(action, round)
 	}, delay)
 }
