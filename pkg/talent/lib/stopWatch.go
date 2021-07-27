@@ -46,7 +46,7 @@ func (sw *StopWatch) Get(name string, tag string) {
 	if sw.printFile {
 		filepath = getFileAndLine(2)
 	}
-	log.Printf("%s %-10s %-13s %10dms %s -> %s \n", filepath, sw.user, "past_time:", time.Now().Sub(t)/time.Millisecond, name, tag)
+	log.Printf("%s %-10s %-13s %10dms %s -> %s \n", filepath, sw.user, "past_time:", time.Since(t)/time.Millisecond, name, tag)
 }
 
 func (sw *StopWatch) End(name string, tag string) {
@@ -58,7 +58,7 @@ func (sw *StopWatch) End(name string, tag string) {
 	if sw.printFile {
 		filepath = getFileAndLine(2)
 	}
-	log.Printf("%s  %-10s %-13s %10dms %s -> %s", filepath, sw.user, "end_past_time:", time.Now().Sub(t)/time.Millisecond, name, tag)
+	log.Printf("%s %-10s %-13s %10dms %s -> %s", filepath, sw.user, "end_past_time:", time.Since(t)/time.Millisecond, name, tag)
 	delete(sw.timeMap, name)
 }
 
@@ -67,7 +67,7 @@ func (sw *StopWatch) GetPastTime(name string) time.Duration {
 	if !ok {
 		return 0
 	}
-	return time.Now().Sub(t)
+	return time.Since(t)
 }
 
 func (sw *StopWatch) Log(name string, msg string) {

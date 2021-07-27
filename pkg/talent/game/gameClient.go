@@ -74,8 +74,6 @@ func (gameClient *GameClient) Run() (err error) {
 	gameClient.joinGame()
 	gameClient.stopWatch.Start("startJoin", "")
 
-	fmt.Println("starting handle message")
-
 	time.Sleep(10 * time.Second)
 	err = gameClient.handleMessage()
 	gameClient.stopWatch.Log("DelayTime:", strconv.Itoa(gameClient.Delay))

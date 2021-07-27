@@ -166,7 +166,7 @@ func (ws *WebsocketClient) handshake() error {
   ]`
 
 	ws.stopWatch.Start("handshake", "")
-	ws.stopWatch.Log("send handshake", handshakeBody)
+	ws.stopWatch.Log("send handshake", "")
 	err := ws.websocket.WriteMessage(websocket.TextMessage, []byte(handshakeBody))
 
 	if err != nil {
@@ -208,7 +208,6 @@ func (ws *WebsocketClient) handleMessage() {
 		case "/meta/connect":
 			ws.handleHeartbeat(message)
 		default:
-			fmt.Println("rsMsg.Data", rsMsg.Data)
 			data, err := json.Marshal(rsMsg.Data)
 			if err != nil {
 				ws.stopWatch.Log("json error", err.Error())
