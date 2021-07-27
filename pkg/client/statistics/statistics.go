@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	logFilepath  = "./stress-test.log"
-	EnableLogger bool
+	logFilepath         = "./stress-test.log"
+	EnableLogger        bool
+	TimeWindowSizeInSec int
 )
 
 func initLogger() {
@@ -41,7 +42,8 @@ type ResultStatistics struct {
 	MinTime,
 	RunningTime,
 	ProcessTime uint64
-	locker sync.RWMutex
+	TimeWindow *TimeWindow
+	locker     sync.RWMutex
 }
 
 func NewResultStatistics(concurrentNum int) *ResultStatistics {
@@ -49,6 +51,11 @@ func NewResultStatistics(concurrentNum int) *ResultStatistics {
 
 	if concurrentNum == 0 {
 		concurrentNum = 1
+	}
+
+	var timeWindow *TimeWindow
+	if TimeWindowSizeInSec > 0 {
+		timeWindow = NewTimeWindow(TimeWindowSizeInSec)
 	}
 
 	return &ResultStatistics{
@@ -60,6 +67,7 @@ func NewResultStatistics(concurrentNum int) *ResultStatistics {
 		MinTime:       0,
 		RunningTime:   0,
 		ProcessTime:   0,
+		TimeWindow:    timeWindow,
 	}
 }
 
@@ -113,12 +121,25 @@ func (s *ResultStatistics) Append(r *runner.TaskResult) {
 	if s.MinTime == 0 || r.ProcessTime < s.MinTime {
 		s.MinTime = r.ProcessTime
 	}
+
+	if s.TimeWindow != nil {
+		s.TimeWindow.Append(r)
+	}
 }
 
 func (s *ResultStatistics) PrintTableHeader() {
-	fmt.Println("─────────┬─────────┬─────────┬──────────┬──────────┬──────────┬──────────")
-	fmt.Println(" 耗时(s) │  成功数 │  失败数 │     qps  │ 最长耗时 │ 最短耗时 │ 平均耗时 ")
-	fmt.Println("─────────┼─────────┼─────────┼──────────┼──────────┼──────────┼──────────")
+	lineTop := "─────────┬─────────┬─────────┬──────────┬──────────┬──────────┬──────────"
+	lineBtm := "─────────┼─────────┼─────────┼──────────┼──────────┼──────────┼──────────"
+	headMid := " 耗时(s) │  成功数 │  失败数 │     qps  │ 最长耗时 │ 最短耗时 │ 平均耗时 "
+	if s.TimeWindow != nil {
+		lineTop += "┬──────────┬──────────"
+		lineBtm += "┼──────────┼──────────"
+		headMid += "│   qps-w  │平均耗时-w"
+	}
+
+	fmt.Println(lineTop)
+	fmt.Println(headMid)
+	fmt.Println(lineBtm)
 }
 
 func (s *ResultStatistics) PrintTableRow() {
@@ -128,6 +149,11 @@ func (s *ResultStatistics) PrintTableRow() {
 	processTime := s.ProcessTime
 	if processTime == 0 {
 		processTime = 1
+	}
+
+	var realtimeQps, realtimeSpeed float64
+	if s.TimeWindow != nil {
+		realtimeQps, realtimeSpeed = s.TimeWindow.Info()
 	}
 
 	row := fmt.Sprintf(" %7d │ %7d │ %7d │ %8.2f │ %8.2f │ %8.2f │ %8.2f ",
@@ -141,5 +167,10 @@ func (s *ResultStatistics) PrintTableRow() {
 		float64(s.MinTime)/1e6,
 		float64(s.ProcessTime)/1e6/float64(s.SuccessNum+s.FailureNum),
 	)
+
+	if s.TimeWindow != nil {
+		row = fmt.Sprintf("%s│ %8.2f │ %8.2f ", row, realtimeQps, realtimeSpeed)
+	}
+
 	fmt.Println(row)
 }
