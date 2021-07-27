@@ -2,11 +2,35 @@ package statistics
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
+	log "github.com/sirupsen/logrus"
 )
+
+var (
+	logFilepath  = "./stress-test.log"
+	EnableLogger bool
+)
+
+func initLogger() {
+	if !EnableLogger {
+		return
+	}
+
+	log.SetFormatter(&log.JSONFormatter{})
+
+	var file, err = os.OpenFile(logFilepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Println("Could Not Open Log File : " + err.Error())
+	}
+
+	log.SetOutput(file)
+
+	log.SetLevel(log.InfoLevel)
+}
 
 type ResultStatistics struct {
 	ConcurrentNum int
@@ -20,6 +44,8 @@ type ResultStatistics struct {
 }
 
 func NewResultStatistics(concurrentNum int) *ResultStatistics {
+	initLogger()
+
 	if concurrentNum == 0 {
 		concurrentNum = 1
 	}
@@ -57,6 +83,9 @@ func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult, wg *sync.WaitGrou
 	s.PrintTableHeader()
 	for r := range ch {
 		s.Append(r)
+		if EnableLogger {
+			log.Info(r)
+		}
 	}
 
 	stopCh <- true
@@ -93,11 +122,14 @@ func (s *ResultStatistics) PrintTableRow() {
 	if processTime == 0 {
 		processTime = 1
 	}
+
 	row := fmt.Sprintf(" %7d │ %7d │ %7d │ %8.2f │ %8.2f │ %8.2f │ %8.2f ",
 		s.RunningTime/1e9,
 		s.SuccessNum,
 		s.FailureNum,
-		float64(s.SuccessNum*uint64(s.ConcurrentNum)*1e9)/float64(processTime),
+		// qps can also be more precise when no rate limiter involved
+		// float64(s.SuccessNum*uint64(s.ConcurrentNum)*1e9) / float64(processTime)
+		float64(s.SuccessNum*1e9)/float64(s.RunningTime),
 		float64(s.MaxTime)/1e6,
 		float64(s.MinTime)/1e6,
 		float64(s.ProcessTime)/1e6/float64(s.SuccessNum+s.FailureNum),

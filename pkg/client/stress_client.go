@@ -2,16 +2,16 @@ package client
 
 import (
 	"fmt"
-	"runtime"
 	"sync"
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/client/runner"
 	"github.com/ginkgoch/stress-test/pkg/client/statistics"
+	"go.uber.org/ratelimit"
 )
 
 func init() {
-	runtime.GOMAXPROCS(1)
+	// runtime.GOMAXPROCS(1)
 }
 
 type StressTestClient struct {
@@ -47,7 +47,23 @@ func (s *StressTestClient) Header() {
 	fmt.Println()
 }
 
-func (s *StressTestClient) Run(taskFunc func() error) {
+func (s *StressTestClient) Run(name string, taskFunc func() error) {
+	s.RunSingleTaskWithRateLimiter(name, nil, taskFunc)
+}
+
+func (s *StressTestClient) RunSingleTaskWithRateLimiter(name string, rateLimiter ratelimit.Limiter, taskFunc func() error) {
+	s.runWithRateLimiterInternal(rateLimiter, func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult) {
+		runner.RunSync(name, s.Number, ch, wg, taskFunc)
+	})
+}
+
+func (s *StressTestClient) RunMultiTasksWithRateLimiter(name string, rateLimiter ratelimit.Limiter, taskFunc func(ch chan<- *runner.TaskResult) error) {
+	s.runWithRateLimiterInternal(rateLimiter, func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult) {
+		runner.RunSyncWithMultiTasks(s.Number, ch, wg, taskFunc)
+	})
+}
+
+func (s *StressTestClient) runWithRateLimiterInternal(rateLimiter ratelimit.Limiter, taskFunc func(num int, wg *sync.WaitGroup, ch chan<- *runner.TaskResult)) {
 	ch := make(chan *runner.TaskResult, 1000)
 	wg := new(sync.WaitGroup)
 	wgStatistics := new(sync.WaitGroup)
@@ -59,7 +75,12 @@ func (s *StressTestClient) Run(taskFunc func() error) {
 
 	for i := 0; i < s.ConcurrentNum; i++ {
 		wg.Add(1)
-		go runner.RunSync(s.Number, ch, wg, taskFunc)
+		go func() {
+			if rateLimiter != nil {
+				rateLimiter.Take()
+			}
+			taskFunc(s.Number, wg, ch)
+		}()
 	}
 	wg.Wait()
 
