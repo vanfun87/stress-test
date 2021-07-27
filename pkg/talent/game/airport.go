@@ -55,7 +55,7 @@ func NewAirport() *Airport {
 // }
 
 //UserJoined aa
-func (hf *Airport) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *Airport) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 

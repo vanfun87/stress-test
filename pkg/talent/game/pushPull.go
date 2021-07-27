@@ -51,7 +51,7 @@ func NewPushPull() *PushPull {
 // }
 
 //UserJoined aa
-func (hf *PushPull) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *PushPull) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 

@@ -54,12 +54,12 @@ func NewBombRisk() *BombRisk {
 // 	"earning": 0
 // }
 
-func (hf *BombRisk) GameEnded(g *GameClient, msg *JoginedMsg) bool {
+func (hf *BombRisk) GameEnded(g *GameClient, msg *JoinedMsg) bool {
 	return false
 }
 
 //UserJoined aa
-func (hf *BombRisk) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *BombRisk) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 

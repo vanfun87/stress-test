@@ -2,7 +2,7 @@ package game
 
 //GamePlayer  gameplayer interface
 type GamePlayer interface {
-	UserJoined(*GameClient, *JoginedMsg)
+	UserJoined(*GameClient, *JoinedMsg)
 	SessionEnded(*GameClient, *SessionEndedMsg)
 	GameStated(*GameClient, *GameStartedMsg)
 	PlayerUpdated(*GameClient, []byte)

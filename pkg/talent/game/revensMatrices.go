@@ -68,7 +68,7 @@ type revenRESPOND struct {
 }
 
 //UserJoined aa
-func (hf *RevensMatrices) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *RevensMatrices) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 

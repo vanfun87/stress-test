@@ -54,7 +54,6 @@ func NewGameClient(config *GameConfig, player GamePlayer) *GameClient {
 
 //Run game
 func (g *GameClient) Run() (err error) {
-
 	defer g.close()
 	g.stopWatch.Start("Run", strconv.Itoa(g.userID))
 	defer func() {
@@ -87,15 +86,15 @@ func (g *GameClient) handleMessage() error {
 	// 	fmt.Println("sefe")
 	// }
 
-	for receivMsg := range g.wsClient.ReceivedMsgChan {
-		fmt.Println(receivMsg)
+	for receiveMsg := range g.wsClient.ReceivedMsgChan {
+		fmt.Println(receiveMsg)
 
-		switch receivMsg.Channel {
+		switch receiveMsg.Channel {
 		case "error":
-			return errors.New(string(receivMsg.Data))
+			return errors.New(string(receiveMsg.Data))
 		case "/gameroom":
 			event := Event{}
-			err := json.Unmarshal(receivMsg.Data, &event)
+			err := json.Unmarshal(receiveMsg.Data, &event)
 			if err != nil {
 				return err
 			}
@@ -104,21 +103,21 @@ func (g *GameClient) handleMessage() error {
 				return errors.New("game UNAVAILABLE")
 			case USER_JOINED:
 				g.stopWatch.End("startJoin", USER_JOINED)
-				joginedMsg := &JoginedMsg{}
-				err = json.Unmarshal(receivMsg.Data, joginedMsg)
+				joinedMsg := &JoinedMsg{}
+				err = json.Unmarshal(receiveMsg.Data, joinedMsg)
 				if err != nil {
 					return err
 				}
-				if !joginedMsg.Active {
+				if !joinedMsg.Active {
 					return errors.New("join game ,not active")
 				}
 				g.stopWatch.Start(USER_JOINED, "")
-				g.gamePlayer.UserJoined(g, joginedMsg)
+				g.gamePlayer.UserJoined(g, joinedMsg)
 			case SESSION_ENDED:
 				g.stopWatch.End(USER_JOINED, SESSION_ENDED)
 				g.stopWatch.End(GAME_ENDED, SESSION_ENDED)
 				joginedMsg := &SessionEndedMsg{}
-				err = json.Unmarshal(receivMsg.Data, joginedMsg)
+				err = json.Unmarshal(receiveMsg.Data, joginedMsg)
 				if err != nil {
 					return err
 				}
@@ -129,7 +128,7 @@ func (g *GameClient) handleMessage() error {
 			}
 		case "/game":
 			event := Event{}
-			err := json.Unmarshal(receivMsg.Data, &event)
+			err := json.Unmarshal(receiveMsg.Data, &event)
 			eventData, err := json.Marshal(event.Data)
 			if err != nil {
 				g.stopWatch.Log("json Unmarshal error", err.Error())
@@ -184,7 +183,7 @@ func (g *GameClient) handleMessage() error {
 				g.stopWatch.Log("/game unhandle event: ", event.Event)
 			}
 		default:
-			g.stopWatch.Log("unhandle_chnnel", receivMsg.Channel)
+			g.stopWatch.Log("unhandle_chnnel", receiveMsg.Channel)
 		}
 	}
 	return nil
@@ -252,23 +251,23 @@ const (
 )
 
 func RunGame(gamconfig *GameConfig) (err error) {
-	var gp GamePlayer
+	var player GamePlayer
 	switch GameID(gamconfig.ID) {
 	case RM:
-		gp = NewRevensMatrices(5)
+		player = NewRevensMatrices(5)
 	case CM:
-		gp = NewCompetitiveMath(5)
+		player = NewCompetitiveMath(5)
 	case PP:
-		gp = NewPushPull()
+		player = NewPushPull()
 	case AIR:
-		gp = NewAirport()
+		player = NewAirport()
 	case AIR_T:
-		gp = NewAirport()
+		player = NewAirport()
 	default:
 		err = fmt.Errorf("player %d, no such game:%s ", gamconfig.PlayerID, gamconfig.ID)
 		return
 	}
-	gc := *NewGameClient(gamconfig, gp)
-	err = gc.Run()
+	gameClient := *NewGameClient(gamconfig, player)
+	err = gameClient.Run()
 	return
 }

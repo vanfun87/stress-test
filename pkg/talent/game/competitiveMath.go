@@ -21,8 +21,8 @@ type CompetitiveMath struct {
 }
 
 func NewCompetitiveMath(delay int) *CompetitiveMath {
-	defaltPlaer := CompetitiveMathPlayer{
-		CONFIDENCE:     10, // anser number
+	defaultPlayer := CompetitiveMathPlayer{
+		CONFIDENCE:     10, // answer number
 		BetRatio:       1,  //ratio
 		RANK:           1,
 		RankConfidence: 7,
@@ -37,11 +37,11 @@ func NewCompetitiveMath(delay int) *CompetitiveMath {
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
-	return &CompetitiveMath{Delay: delay, currentRound: -1, Player: defaltPlaer}
+	return &CompetitiveMath{Delay: delay, currentRound: -1, Player: defaultPlayer}
 }
 
 //UserJoined aa
-func (hf *CompetitiveMath) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *CompetitiveMath) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 
