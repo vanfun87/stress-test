@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ginkgoch/stress-test/pkg/log"
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
-	"github.com/sirupsen/logrus"
 )
 
 // The GameClient type represents a game WebSocket connection and game data.
@@ -43,7 +43,7 @@ func NewGameClient(config *GameConfig, player GamePlayer) *GameClient {
 	stopwatch := lib.NewStopWatch(config.PhoneNumber + ":" + strconv.Itoa(config.PlayerID))
 
 	wsUrl := fmt.Sprintf("wss://%s/game-server/cometd", config.WebSocketHost())
-	logrus.Infoln("ws server", wsUrl)
+	log.Println("ws server", wsUrl)
 
 	gc := GameClient{
 		userID:     config.PlayerID,
@@ -89,7 +89,7 @@ func (gameClient *GameClient) Run() (err error) {
 
 func (g *GameClient) handleMessage() error {
 	for receiveMsg := range g.wsClient.ReceivedMsgChan {
-		logrus.Infof("channel received:", receiveMsg.Channel)
+		log.Println("channel received:", receiveMsg.Channel)
 		switch receiveMsg.Channel {
 		case "error":
 			return errors.New(string(receiveMsg.Data))
@@ -239,7 +239,7 @@ func (g *GameClient) joinGame() {
 }
 
 func (g *GameClient) leaveGame() {
-	logrus.Infof("leaving game room")
+	log.Println("leaving game room")
 	joinGame := JoinGameSend{
 		Action: "leave",
 		Room:   g.roomID,

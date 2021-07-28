@@ -26,6 +26,7 @@ var (
 	game               bool
 	storeTalentObjects bool
 	delay              int
+	gameID             string
 )
 
 func init() {
@@ -40,6 +41,9 @@ func init() {
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
+
+	// gameID = "competitive_math"
+	gameID = "ravens_matrices"
 
 	rootCmd.AddCommand(toCmd)
 }
@@ -208,13 +212,13 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 
 	if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
 		processDelay()
-		return talentObj.StartGame("competitive_math", httpClient)
+		return talentObj.StartGame(gameID, httpClient)
 	}); err != nil {
 		return
 	}
 
 	if game && (stage == 0 || stage > i) {
-		err = talentObj.PlayGame("competitive_math")
+		err = talentObj.PlayGame(gameID)
 		if err != nil {
 			return err
 		} else if debug {
@@ -226,7 +230,7 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 
 	if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
 		processDelay()
-		return talentObj.StopGame("competitive_math", httpClient)
+		return talentObj.StopGame(gameID, httpClient)
 	}); err != nil {
 		return
 	}

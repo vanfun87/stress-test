@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ginkgoch/stress-test/pkg/log"
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
-	"github.com/sirupsen/logrus"
 
 	//"test/websocket"
 	"github.com/gorilla/websocket"
@@ -135,7 +135,7 @@ func (ws *WebsocketClient) connect() error {
 	c, _, err := websocket.DefaultDialer.Dial(ws.serverURL, nil)
 	ws.stopWatch.End("connect", fmt.Sprintf("%v", err))
 	if err != nil {
-		logrus.Println("Dial error ", err)
+		log.Println("Dial error ", err)
 		return err
 	}
 	ws.websocket = c
@@ -170,7 +170,7 @@ func (ws *WebsocketClient) handshake() error {
 	err := ws.websocket.WriteMessage(websocket.TextMessage, []byte(handshakeBody))
 
 	if err != nil {
-		logrus.Println("write error:", err)
+		log.Println("write error:", err)
 		return err
 	}
 	return nil
@@ -242,7 +242,7 @@ func (ws *WebsocketClient) handleHeartbeat(message []byte) {
 	var heartbeats []Heartbeat
 	err := json.Unmarshal(message, &heartbeats)
 	if err != nil {
-		logrus.Println("handshakeMsg json err:", err, heartbeats)
+		log.Println("handshakeMsg json err:", err, heartbeats)
 		return
 	}
 	heartbeatMsg := heartbeats[0]
@@ -251,11 +251,11 @@ func (ws *WebsocketClient) handleHeartbeat(message []byte) {
 }
 
 func (ws *WebsocketClient) handleHandshake(msg []byte) error {
-	logrus.Infoln("handshake recv")
+	log.Println("handshake recv")
 	var handshakeMessages []HandshakeMsg
 	err := json.Unmarshal(msg, &handshakeMessages)
 	if err != nil {
-		logrus.Infoln("handshakeMsg json err:", err, handshakeMessages)
+		log.Println("handshakeMsg json err:", err, handshakeMessages)
 		return err
 	}
 	handshakeMsg := handshakeMessages[0]
