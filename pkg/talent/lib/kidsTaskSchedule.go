@@ -34,7 +34,7 @@ func doActionSpeed(count int, speed int, doFunc func(int) (interface{}, error)) 
 	index, endCount := 0, 0
 	for {
 		select {
-		case _ = <-ticker.C:
+		case <-ticker.C:
 			if index >= count {
 				ticker.Stop()
 				log.Println("ticker.Stop")
