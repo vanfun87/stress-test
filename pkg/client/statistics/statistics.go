@@ -72,9 +72,7 @@ func (s *ResultStatistics) Watch(ch <-chan *runner.TaskResult, wg *sync.WaitGrou
 	s.PrintTableHeader()
 	for r := range ch {
 		s.Append(r)
-		if log.EnableLogger {
-			log.Println(r)
-		}
+		log.Println(r)
 	}
 
 	stopCh <- true

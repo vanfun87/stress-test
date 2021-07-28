@@ -30,13 +30,25 @@ func InitLogger() {
 }
 
 func Info(args ...interface{}) {
+	if !EnableLogger {
+		return
+	}
+
 	log.Info(args...)
 }
 
 func Println(args ...interface{}) {
+	if !EnableLogger {
+		return
+	}
+
 	log.Println(args...)
 }
 
 func Printf(str string, args ...interface{}) {
+	if !EnableLogger {
+		return
+	}
+
 	log.Printf(str, args...)
 }
