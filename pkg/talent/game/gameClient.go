@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
+	"github.com/sirupsen/logrus"
 )
 
 // The GameClient type represents a game WebSocket connection and game data.
@@ -42,7 +43,7 @@ func NewGameClient(config *GameConfig, player GamePlayer) *GameClient {
 	stopwatch := lib.NewStopWatch(config.PhoneNumber + ":" + strconv.Itoa(config.PlayerID))
 
 	wsUrl := fmt.Sprintf("wss://%s/game-server/cometd", config.WebSocketHost())
-	fmt.Println("ws server", wsUrl)
+	logrus.Infoln("ws server", wsUrl)
 
 	gc := GameClient{
 		userID:     config.PlayerID,
@@ -79,6 +80,8 @@ func (gameClient *GameClient) Run() (err error) {
 	gameClient.stopWatch.Log("DelayTime:", strconv.Itoa(gameClient.Delay))
 	if err != nil {
 		return err
+	} else {
+		gameClient.leaveGame()
 	}
 	return nil
 
@@ -86,6 +89,7 @@ func (gameClient *GameClient) Run() (err error) {
 
 func (g *GameClient) handleMessage() error {
 	for receiveMsg := range g.wsClient.ReceivedMsgChan {
+		logrus.Infof("channel received:", receiveMsg.Channel)
 		switch receiveMsg.Channel {
 		case "error":
 			return errors.New(string(receiveMsg.Data))
@@ -133,6 +137,7 @@ func (g *GameClient) handleMessage() error {
 			if err != nil {
 				g.stopWatch.Log("json marshal error", err.Error())
 			}
+
 			switch event.Event {
 			case GAME_STARTED: // game start
 				g.stopWatch.Start(GAME_STARTED, "")
@@ -178,7 +183,7 @@ func (g *GameClient) handleMessage() error {
 			case GAME_ENDED: // game end
 				g.stopWatch.End(GAME_STARTED, GAME_ENDED)
 				g.stopWatch.Start(GAME_ENDED, "")
-				return nil
+				// return nil
 			default:
 				g.stopWatch.Log("/game unhandled event: ", event.Event)
 			}
@@ -227,6 +232,16 @@ func (g *GameClient) SendAction(action Action, round int) {
 func (g *GameClient) joinGame() {
 	joinGame := JoinGameSend{
 		Action: "join",
+		Room:   g.roomID,
+		User:   g.userID,
+	}
+	g.wsClient.SendAction(joinGame, "/service/gameroom/"+g.roomID)
+}
+
+func (g *GameClient) leaveGame() {
+	logrus.Infof("leaving game room")
+	joinGame := JoinGameSend{
+		Action: "leave",
 		Room:   g.roomID,
 		User:   g.userID,
 	}

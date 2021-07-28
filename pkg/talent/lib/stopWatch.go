@@ -2,9 +2,10 @@ package lib
 
 import (
 	"fmt"
-	"log"
 	"runtime"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type StopWatch struct {
@@ -31,9 +32,7 @@ func (sw *StopWatch) Start(name string, tag string) {
 	if sw.printFile {
 		filepath = getFileAndLine(2)
 	}
-	//file,line:=getFileAndLine(2)
-	//log.Printf("%s:%s: %10s start_time:%s %20stag:%s \n", file,line,sw.user,time.Now(), name, tag )
-	log.Printf("%s %-10s %-13s %s %-20s %s \n", filepath, sw.user, "start_time:", time.Now().Format("2006-01-02 15:04:05.000000"), name, tag)
+	logrus.Printf("%s %-10s %-13s %s %-20s %s \n", filepath, sw.user, "start_time:", time.Now().Format("2006-01-02 15:04:05.000000"), name, tag)
 }
 
 func (sw *StopWatch) Get(name string, tag string) {
@@ -46,7 +45,7 @@ func (sw *StopWatch) Get(name string, tag string) {
 	if sw.printFile {
 		filepath = getFileAndLine(2)
 	}
-	log.Printf("%s %-10s %-13s %10dms %s -> %s \n", filepath, sw.user, "past_time:", time.Since(t)/time.Millisecond, name, tag)
+	logrus.Printf("%s %-10s %-13s %10dms %s -> %s \n", filepath, sw.user, "past_time:", time.Since(t)/time.Millisecond, name, tag)
 }
 
 func (sw *StopWatch) End(name string, tag string) {
@@ -58,7 +57,7 @@ func (sw *StopWatch) End(name string, tag string) {
 	if sw.printFile {
 		filepath = getFileAndLine(2)
 	}
-	log.Printf("%s %-10s %-13s %10dms %s -> %s", filepath, sw.user, "end_past_time:", time.Since(t)/time.Millisecond, name, tag)
+	logrus.Infof("%s %-10s %-13s %10dms %s -> %s", filepath, sw.user, "end_past_time:", time.Since(t)/time.Millisecond, name, tag)
 	delete(sw.timeMap, name)
 }
 
@@ -75,6 +74,6 @@ func (sw *StopWatch) Log(name string, msg string) {
 	if sw.printFile {
 		filepath = getFileAndLine(2)
 	}
-	log.Printf("%s %-10s Log: %-10s %s", filepath, sw.user, name, msg)
+	logrus.Infof("%s %-10s Log: %-10s %s", filepath, sw.user, name, msg)
 
 }

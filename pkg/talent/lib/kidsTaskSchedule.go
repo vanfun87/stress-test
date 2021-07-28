@@ -1,10 +1,10 @@
 package lib
 
 import (
-	"fmt"
-	"log"
 	"sync/atomic"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 //DoAction do action
@@ -19,8 +19,7 @@ func task2(c chan interface{}, index int, doFunc func(int) (interface{}, error))
 	v, err := doFunc(index)
 	if err != nil {
 		c <- nil
-		fmt.Println("work task error:", err)
-		log.Println("work task error:", err)
+		logrus.Infoln("work task error:", err)
 		return
 	}
 	c <- v
@@ -28,7 +27,7 @@ func task2(c chan interface{}, index int, doFunc func(int) (interface{}, error))
 
 func doActionSpeed(count int, speed int, doFunc func(int) (interface{}, error)) (rsList []interface{}) {
 	ticker := time.NewTicker(time.Duration(1000000000/speed) * time.Nanosecond)
-	log.Printf("ticker speed %d\n", speed)
+	logrus.Infof("ticker speed %d\n", speed)
 	c := make(chan interface{}, 100)
 	defer close(c)
 	index, endCount := 0, 0
@@ -37,9 +36,9 @@ func doActionSpeed(count int, speed int, doFunc func(int) (interface{}, error)) 
 		case <-ticker.C:
 			if index >= count {
 				ticker.Stop()
-				log.Println("ticker.Stop")
+				logrus.Infoln("ticker.Stop")
 			} else {
-				log.Println("task start ", index)
+				logrus.Infoln("task start ", index)
 				go task2(c, index, doFunc)
 				index++
 			}
@@ -49,7 +48,7 @@ func doActionSpeed(count int, speed int, doFunc func(int) (interface{}, error)) 
 			}
 			endCount++
 			if endCount >= count {
-				log.Println("all task done")
+				logrus.Infoln("all task done")
 				return rsList
 			}
 		}
@@ -75,7 +74,7 @@ func doActionThread(count int, threadNumber int, doFunc func(int) (interface{}, 
 		}
 		endCount++
 		if endCount >= count {
-			log.Println("all task done")
+			logrus.Infoln("all task done")
 			return
 		}
 	}
