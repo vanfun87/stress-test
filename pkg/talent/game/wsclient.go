@@ -3,10 +3,10 @@ package game
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 
+	"github.com/ginkgoch/stress-test/pkg/log"
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
 
 	//"test/websocket"
@@ -26,16 +26,8 @@ type WebsocketClient struct {
 	closed          bool
 	stopWatch       *lib.StopWatch
 	userID          int
-	sendMode        Mode
 	mutex           sync.Mutex
 }
-
-type Mode int32
-
-const (
-	Single Mode = 1
-	Pool   Mode = 2
-)
 
 type setMessage interface {
 	setMessage(id string, clientID string)
@@ -83,7 +75,6 @@ func NewWebsocketClient(serverURL string, userid int) *WebsocketClient {
 		handshakeChan:   make(chan error),
 		stopWatch:       &stopwatch,
 		userID:          userid,
-		sendMode:        Single,
 		closed:          true,
 	}
 	return &gc
@@ -97,7 +88,6 @@ func (ws *WebsocketClient) SetGameHandler() {
 func (ws *WebsocketClient) sendLoop() {
 	ws.stopWatch.Start("sendLoop", "ws.sendMode")
 	for sendData := range ws.sendMsgChan {
-
 		if err := ws.sendToWebsocket(sendData); err != nil {
 			return
 		}
@@ -105,15 +95,7 @@ func (ws *WebsocketClient) sendLoop() {
 }
 
 func (ws *WebsocketClient) sendData(sendData setMessage) {
-	if ws.sendMode == Pool {
-		lib.SendWorkPool <- func() {
-			if err := ws.sendToWebsocket(sendData); err != nil {
-				log.Println("sendData-error:", err)
-			}
-		}
-	} else {
-		ws.sendMsgChan <- sendData
-	}
+	ws.sendMsgChan <- sendData
 }
 
 func (ws *WebsocketClient) sendToWebsocket(sendData setMessage) error {
@@ -137,10 +119,8 @@ func (ws *WebsocketClient) Connect() error {
 	if err != nil {
 		return err
 	}
-	if ws.sendMode == Single {
-		go ws.sendLoop()
-	}
 
+	go ws.sendLoop()
 	go ws.handleMessage()
 	if err = <-ws.handshakeChan; err != nil {
 		ws.close()
@@ -186,7 +166,7 @@ func (ws *WebsocketClient) handshake() error {
   ]`
 
 	ws.stopWatch.Start("handshake", "")
-	ws.stopWatch.Log("send handshake", handshakeBody)
+	ws.stopWatch.Log("send handshake", "")
 	err := ws.websocket.WriteMessage(websocket.TextMessage, []byte(handshakeBody))
 
 	if err != nil {
@@ -228,7 +208,6 @@ func (ws *WebsocketClient) handleMessage() {
 		case "/meta/connect":
 			ws.handleHeartbeat(message)
 		default:
-			fmt.Println("rsMsg.Data", rsMsg.Data)
 			data, err := json.Marshal(rsMsg.Data)
 			if err != nil {
 				ws.stopWatch.Log("json error", err.Error())

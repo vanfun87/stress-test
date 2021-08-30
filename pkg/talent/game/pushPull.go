@@ -51,7 +51,7 @@ func NewPushPull() *PushPull {
 // }
 
 //UserJoined aa
-func (hf *PushPull) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *PushPull) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 
@@ -83,7 +83,6 @@ func (hf *PushPull) PlayerUpdated(g *GameClient, msg []byte) {
 		g.stopWatch.Log("json Unmarshal err", err.Error())
 		return
 	}
-	//log.Println(playerUpdated)
 	for _, move := range playerUpdated.Moves {
 		switch move {
 		case CHOOSE:

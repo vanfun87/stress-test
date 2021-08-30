@@ -55,7 +55,7 @@ func NewAirport() *Airport {
 // }
 
 //UserJoined aa
-func (hf *Airport) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *Airport) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 
@@ -87,7 +87,6 @@ func (hf *Airport) PlayerUpdated(g *GameClient, msg []byte) {
 		g.stopWatch.Log("json Unmarshal err", err.Error())
 		return
 	}
-	//log.Println(playerUpdated)
 	for _, move := range playerUpdated.Moves {
 		switch move {
 		case CHOOSE:

@@ -21,30 +21,33 @@ import (
 
 var (
 	filepath           string
-	limit              int
-	debug              bool
 	stage              int
 	useQps             bool
-	game               bool
+	playGame           bool
 	storeTalentObjects bool
 	delay              int
+	endless            bool
+	// gameID             string
+	games []string
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-
+	toCmd.PersistentFlags().IntVarP(&delay, "delay", "", 0, "--delay <ms>, default 0")
 	toCmd.PersistentFlags().StringVarP(&filepath, "filepath", "f", "", "<signing in user list file>[.talent].json")
 	toCmd.PersistentFlags().StringVarP(&talent.ServiceEndpoint, "serverEndpoint", "u", talent.DefaultServiceEndpoint, "https://talent.test.moblab-us.cn/api/1")
-	toCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 500, "-l <limit>, default 500")
 	toCmd.PersistentFlags().IntVarP(&stage, "stage", "t", 0, "-t <stage>, default 0")
-	toCmd.PersistentFlags().IntVarP(&delay, "delay", "", 0, "--delay <ms>, default 0")
-	toCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "-d, default false")
 	toCmd.PersistentFlags().BoolVarP(&useQps, "qps", "q", false, "-q, default false")
-	toCmd.PersistentFlags().BoolVarP(&game, "game", "g", false, "-g, default false")
+	toCmd.PersistentFlags().BoolVarP(&playGame, "playGame", "p", false, "--playGame, default false")
+	toCmd.PersistentFlags().BoolVarP(&endless, "endless", "", false, "--endless, default false")
+	toCmd.PersistentFlags().StringArrayVarP(&games, "games", "g", []string{"competitive_math"}, `-g, game names, games are: competitive_math (default), ravens_matrices, push_pull, minimum_effort_airport, minimum_effort_airport_target`)
 	toCmd.PersistentFlags().BoolVarP(&storeTalentObjects, "storeTalentObjects", "s", false, "-s, default false")
 	toCmd.MarkFlagRequired("filepath")
 
 	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
+
+	// gameID = "competitive_math"
+	// gameID = "ravens_matrices"
 
 	rootCmd.AddCommand(toCmd)
 }
@@ -98,7 +101,13 @@ var toCmd = &cobra.Command{
 				log.Fatal(debugErr)
 			}
 		} else {
-			executeStressTest(userList, httpClient)
+			if endless {
+				for {
+					executeStressTest(userList, httpClient)
+				}
+			} else {
+				executeStressTest(userList, httpClient)
+			}
 		}
 
 		if storeTalentObjects {
@@ -124,9 +133,13 @@ var toCmd = &cobra.Command{
 func executeStressTest(userList []*talent.TalentObject, httpClient *http.Client) {
 	s := client.NewStressClientWithConcurrentNumber(1, len(userList))
 
-	rateLimiter := ratelimit.New(limit)
-	var index uint32 = 0
+	var rateLimiter ratelimit.Limiter
 
+	if limit > 0 {
+		rateLimiter = ratelimit.New(limit)
+	}
+
+	var index uint32 = 0
 	s.Header()
 	if !useQps {
 		s.RunSingleTaskWithRateLimiter("talent", rateLimiter, func() error {
@@ -207,29 +220,34 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 		i++
 	}
 
-	if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
-		processDelay()
-		return talentObj.StartGame("competitive_math", httpClient)
-	}); err != nil {
-		return
-	}
-
-	if game && (stage == 0 || stage > i) {
-		err = talentObj.PlayGame("competitive_math")
-		if err != nil {
-			return err
-		} else if debug {
-			fmt.Println("debug - play game success")
+	var currentIndex = i
+	for _, game := range games {
+		if i, err = executeSingleStep(i, "start-game", talentObj, ch, func() error {
+			processDelay()
+			return talentObj.StartGame(game, httpClient)
+		}); err != nil {
+			return
 		}
 
-		i++
-	}
+		if playGame && (stage == 0 || stage > i) {
+			err = talentObj.PlayGame(game)
+			if err != nil {
+				return err
+			} else if debug {
+				fmt.Println("debug - play game success")
+			}
 
-	if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
-		processDelay()
-		return talentObj.StopGame("competitive_math", httpClient)
-	}); err != nil {
-		return
+			i++
+		}
+
+		if _, err = executeSingleStep(i, "stop-game", talentObj, ch, func() error {
+			processDelay()
+			return talentObj.StopGame(game, httpClient)
+		}); err != nil {
+			return
+		}
+
+		i = currentIndex
 	}
 
 	return

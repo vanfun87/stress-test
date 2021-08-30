@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ginkgoch/stress-test/pkg/log"
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
 )
 
@@ -21,6 +22,7 @@ type GameClient struct {
 	wsClient   *WebsocketClient
 	stopWatch  *lib.StopWatch
 	Delay      int
+	WorkPools  *lib.DelayWorkPools
 }
 
 ////NewGameClient  new a GameClient
@@ -41,61 +43,59 @@ func NewGameClient(config *GameConfig, player GamePlayer) *GameClient {
 	stopwatch := lib.NewStopWatch(config.PhoneNumber + ":" + strconv.Itoa(config.PlayerID))
 
 	wsUrl := fmt.Sprintf("wss://%s/game-server/cometd", config.WebSocketHost())
-	fmt.Println("ws server", wsUrl)
+	log.Println("ws server", wsUrl)
+
 	gc := GameClient{
 		userID:     config.PlayerID,
 		roomID:     config.RoomID,
 		gamePlayer: player,
 		wsClient:   NewWebsocketClient(wsUrl, config.PlayerID),
 		stopWatch:  &stopwatch,
+		WorkPools:  &lib.DelayWorkPools{DelayWorkChan: []chan *lib.DelayWork{}},
 	}
+
+	gc.WorkPools.InitWorkPools(10)
+	gc.WorkPools.RunDelayWorkPool()
 	return &gc
 }
 
 //Run game
-func (g *GameClient) Run() (err error) {
-
-	defer g.close()
-	g.stopWatch.Start("Run", strconv.Itoa(g.userID))
+func (gameClient *GameClient) Run() (err error) {
+	defer gameClient.close()
+	gameClient.stopWatch.Start("Run", strconv.Itoa(gameClient.userID))
 	defer func() {
-		g.stopWatch.End("Run", fmt.Sprintf("%d %v", g.userID, err))
+		gameClient.stopWatch.End("Run", fmt.Sprintf("%d %v", gameClient.userID, err))
 	}()
-	g.stopWatch.Start("connect_wsclient", "")
-	err = g.wsClient.Connect()
-	g.stopWatch.End("connect_wsclient", fmt.Sprintf("%v", err))
+	gameClient.stopWatch.Start("connect_wsclient", "")
+	err = gameClient.wsClient.Connect()
+	gameClient.stopWatch.End("connect_wsclient", fmt.Sprintf("%v", err))
 	if err != nil {
 		return
 	}
-	g.joinGame()
-	g.stopWatch.Start("startJoin", "")
-
-	fmt.Println("starting handle message")
+	gameClient.joinGame()
+	gameClient.stopWatch.Start("startJoin", "")
 
 	time.Sleep(10 * time.Second)
-	err = g.handleMessage()
-	g.stopWatch.Log("DelayTime:", strconv.Itoa(g.Delay))
+	err = gameClient.handleMessage()
+	gameClient.stopWatch.Log("DelayTime:", strconv.Itoa(gameClient.Delay))
 	if err != nil {
 		return err
+	} else {
+		gameClient.leaveGame()
 	}
 	return nil
 
 }
 
 func (g *GameClient) handleMessage() error {
-	// select{
-	// case _, message, err := g.websocket.ReadMessage():
-	// 	fmt.Println("sefe")
-	// }
-
-	for receivMsg := range g.wsClient.ReceivedMsgChan {
-		fmt.Println(receivMsg)
-
-		switch receivMsg.Channel {
+	for receiveMsg := range g.wsClient.ReceivedMsgChan {
+		log.Println("channel received:", receiveMsg.Channel)
+		switch receiveMsg.Channel {
 		case "error":
-			return errors.New(string(receivMsg.Data))
-		case "/gameroom":
+			return errors.New(string(receiveMsg.Data))
+		case "/gameroom": //1
 			event := Event{}
-			err := json.Unmarshal(receivMsg.Data, &event)
+			err := json.Unmarshal(receiveMsg.Data, &event)
 			if err != nil {
 				return err
 			}
@@ -104,46 +104,50 @@ func (g *GameClient) handleMessage() error {
 				return errors.New("game UNAVAILABLE")
 			case USER_JOINED:
 				g.stopWatch.End("startJoin", USER_JOINED)
-				joginedMsg := &JoginedMsg{}
-				err = json.Unmarshal(receivMsg.Data, joginedMsg)
+				joinedMsg := &JoinedMsg{}
+				err = json.Unmarshal(receiveMsg.Data, joinedMsg)
 				if err != nil {
 					return err
 				}
-				if !joginedMsg.Active {
+				if !joinedMsg.Active {
 					return errors.New("join game ,not active")
 				}
 				g.stopWatch.Start(USER_JOINED, "")
-				g.gamePlayer.UserJoined(g, joginedMsg)
+				g.gamePlayer.UserJoined(g, joinedMsg)
 			case SESSION_ENDED:
 				g.stopWatch.End(USER_JOINED, SESSION_ENDED)
 				g.stopWatch.End(GAME_ENDED, SESSION_ENDED)
-				joginedMsg := &SessionEndedMsg{}
-				err = json.Unmarshal(receivMsg.Data, joginedMsg)
+				joinedMsg := &SessionEndedMsg{}
+				err = json.Unmarshal(receiveMsg.Data, joinedMsg)
 				if err != nil {
 					return err
 				}
-				g.gamePlayer.SessionEnded(g, joginedMsg)
+				g.gamePlayer.SessionEnded(g, joinedMsg)
 				return nil
 			default:
-				g.stopWatch.Start("/gameroom unhandle event: ", event.Event)
+				g.stopWatch.Start("/gameroom unhandled event: ", event.Event)
 			}
-		case "/game":
+		case "/game": //2
 			event := Event{}
-			err := json.Unmarshal(receivMsg.Data, &event)
+			if err := json.Unmarshal(receiveMsg.Data, &event); err != nil {
+				g.stopWatch.Log("json unmarshal error", err.Error())
+			}
+
 			eventData, err := json.Marshal(event.Data)
 			if err != nil {
-				g.stopWatch.Log("json Unmarshal error", err.Error())
+				g.stopWatch.Log("json marshal error", err.Error())
 			}
+
 			switch event.Event {
-			case GAME_STARTED:
+			case GAME_STARTED: // game start
 				g.stopWatch.Start(GAME_STARTED, "")
 				g.stopWatch.Start(GAME_ROUND_STARTED, "FAKE")
 				msg := &GameStartedMsg{}
-				err = json.Unmarshal(eventData, msg)
-				if err != nil {
+				if err = json.Unmarshal(eventData, msg); err != nil {
 					g.stopWatch.Log("json Unmarshal error", err.Error())
 					return err
 				}
+
 				if msg.Status != "RUNNING" {
 					g.stopWatch.Log("game status", msg.Status)
 					return nil
@@ -151,10 +155,10 @@ func (g *GameClient) handleMessage() error {
 				g.gameID = msg.GameID
 				g.Round = msg.Round
 				g.gamePlayer.GameStated(g, msg)
-			case PLAYER_UPDATED:
+			case PLAYER_UPDATED: // client response
 				g.playerUpdated(eventData)
 
-			case GAME_ROUND_STARTED:
+			case GAME_ROUND_STARTED: // round period start
 				g.stopWatch.Start(GAME_ROUND_STARTED, "")
 				g.stopWatch.End(GAME_ROUND_ENDED, GAME_ROUND_STARTED+":"+strconv.Itoa(g.Round))
 				msg := &GameRoundMsg{}
@@ -165,7 +169,7 @@ func (g *GameClient) handleMessage() error {
 				}
 				g.Round = msg.Round
 				g.gamePlayer.GameRoundStarted(g, msg)
-			case GAME_ROUND_ENDED:
+			case GAME_ROUND_ENDED: // round period end
 				g.stopWatch.End(GAME_ROUND_STARTED, GAME_ROUND_ENDED+":"+strconv.Itoa(g.Round))
 				g.stopWatch.Start(GAME_ROUND_ENDED, "")
 				msg := &GameRoundMsg{}
@@ -176,15 +180,15 @@ func (g *GameClient) handleMessage() error {
 				}
 				g.Round = msg.Round
 				g.gamePlayer.GameRoundEnded(g, msg)
-			case GAME_ENDED:
+			case GAME_ENDED: // game end
 				g.stopWatch.End(GAME_STARTED, GAME_ENDED)
 				g.stopWatch.Start(GAME_ENDED, "")
-				return nil
+				// return nil
 			default:
-				g.stopWatch.Log("/game unhandle event: ", event.Event)
+				g.stopWatch.Log("/game unhandled event: ", event.Event)
 			}
 		default:
-			g.stopWatch.Log("unhandle_chnnel", receivMsg.Channel)
+			g.stopWatch.Log("unhandled_channel", receiveMsg.Channel)
 		}
 	}
 	return nil
@@ -210,7 +214,7 @@ func (g *GameClient) close() {
 //SendActionDelay send action,  delay second
 func (g *GameClient) SendActionDelay(action Action, round int, delay int) {
 	g.Delay += delay
-	lib.SendWork(func() {
+	g.WorkPools.SendWork(func() {
 		g.SendAction(action, round)
 	}, delay)
 }
@@ -234,6 +238,16 @@ func (g *GameClient) joinGame() {
 	g.wsClient.SendAction(joinGame, "/service/gameroom/"+g.roomID)
 }
 
+func (g *GameClient) leaveGame() {
+	log.Println("leaving game room")
+	joinGame := JoinGameSend{
+		Action: "leave",
+		Room:   g.roomID,
+		User:   g.userID,
+	}
+	g.wsClient.SendAction(joinGame, "/service/gameroom/"+g.roomID)
+}
+
 type GameID string
 
 const (
@@ -251,24 +265,24 @@ const (
 	//GRIT_ASSESSMENT GameID = "grit_assessment"
 )
 
-func RunGame(gamconfig *GameConfig) (err error) {
-	var gp GamePlayer
-	switch GameID(gamconfig.ID) {
+func RunGame(gameConf *GameConfig) (err error) {
+	var player GamePlayer
+	switch GameID(gameConf.ID) {
 	case RM:
-		gp = NewRevensMatrices(5)
+		player = NewRevensMatrices(5)
 	case CM:
-		gp = NewCompetitiveMath(5)
+		player = NewCompetitiveMath(5)
 	case PP:
-		gp = NewPushPull()
+		player = NewPushPull()
 	case AIR:
-		gp = NewAirport()
+		player = NewAirport()
 	case AIR_T:
-		gp = NewAirport()
+		player = NewAirport()
 	default:
-		err = fmt.Errorf("player %d, no such game:%s ", gamconfig.PlayerID, gamconfig.ID)
+		err = fmt.Errorf("player %d, no such game:%s ", gameConf.PlayerID, gameConf.ID)
 		return
 	}
-	gc := *NewGameClient(gamconfig, gp)
-	err = gc.Run()
+	gameClient := *NewGameClient(gameConf, player)
+	err = gameClient.Run()
 	return
 }

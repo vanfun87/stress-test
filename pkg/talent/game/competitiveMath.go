@@ -21,8 +21,8 @@ type CompetitiveMath struct {
 }
 
 func NewCompetitiveMath(delay int) *CompetitiveMath {
-	defaltPlaer := CompetitiveMathPlayer{
-		CONFIDENCE:     10, // anser number
+	defaultPlayer := CompetitiveMathPlayer{
+		CONFIDENCE:     10, // answer number
 		BetRatio:       1,  //ratio
 		RANK:           1,
 		RankConfidence: 7,
@@ -37,17 +37,16 @@ func NewCompetitiveMath(delay int) *CompetitiveMath {
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
-	return &CompetitiveMath{Delay: delay, currentRound: -1, Player: defaltPlaer}
+	return &CompetitiveMath{Delay: delay, currentRound: -1, Player: defaultPlayer}
 }
 
 //UserJoined aa
-func (hf *CompetitiveMath) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *CompetitiveMath) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 
 //SessionEnded ss
 func (hf *CompetitiveMath) SessionEnded(g *GameClient, msg *SessionEndedMsg) {
-
 }
 
 //GameStated ss
@@ -97,7 +96,6 @@ func (hf *CompetitiveMath) PlayerUpdated(g *GameClient, msg []byte) {
 		return
 	}
 
-	//log.Println(playerUpdated)
 	for _, move := range playerUpdated.Moves {
 		switch move {
 		case ANSWER:
@@ -119,7 +117,6 @@ func (hf *CompetitiveMath) PlayerUpdated(g *GameClient, msg []byte) {
 				return
 			}
 			if len(hf.Player.Answer[g.Round]) <= hf.Player.answercount {
-				//log.Printf("receive error answer count, g.Round:%d, ansercount:%d \n", g.Round, hf.Player.answercount)
 				return
 			}
 

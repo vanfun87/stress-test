@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/ginkgoch/stress-test/pkg/talent/game"
-	"github.com/ginkgoch/stress-test/pkg/talent/lib"
 	"github.com/ginkgoch/stress-test/pkg/templates"
 )
 
@@ -171,8 +170,8 @@ func (talent *TalentObject) StopGame(gameId string, httpClient *http.Client) (er
 }
 
 func (talent *TalentObject) PlayGame(gameId string) (err error) {
-	lib.InitWorkPools(10)
-	lib.RunDelayWorkPool()
+	// lib.InitWorkPools(10)
+	// lib.RunDelayWorkPool()
 	err = game.RunGame(talent.GameConfig)
 	return
 }

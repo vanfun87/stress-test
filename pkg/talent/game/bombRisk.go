@@ -54,12 +54,12 @@ func NewBombRisk() *BombRisk {
 // 	"earning": 0
 // }
 
-func (hf *BombRisk) GameEnded(g *GameClient, msg *JoginedMsg) bool {
+func (hf *BombRisk) GameEnded(g *GameClient, msg *JoinedMsg) bool {
 	return false
 }
 
 //UserJoined aa
-func (hf *BombRisk) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *BombRisk) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 
@@ -90,7 +90,6 @@ func (hf *BombRisk) PlayerUpdated(g *GameClient, msg []byte) {
 		g.stopWatch.Log("json Unmarshal err", err.Error())
 		return
 	}
-	//log.Println(playerUpdated)
 	for _, move := range playerUpdated.Moves {
 		switch move {
 		case CHOOSE:

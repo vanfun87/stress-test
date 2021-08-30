@@ -1,10 +1,10 @@
 package lib
 
 import (
-	"fmt"
-	"log"
 	"sync/atomic"
 	"time"
+
+	"github.com/ginkgoch/stress-test/pkg/log"
 )
 
 //DoAction do action
@@ -19,7 +19,6 @@ func task2(c chan interface{}, index int, doFunc func(int) (interface{}, error))
 	v, err := doFunc(index)
 	if err != nil {
 		c <- nil
-		fmt.Println("work task error:", err)
 		log.Println("work task error:", err)
 		return
 	}
@@ -28,13 +27,13 @@ func task2(c chan interface{}, index int, doFunc func(int) (interface{}, error))
 
 func doActionSpeed(count int, speed int, doFunc func(int) (interface{}, error)) (rsList []interface{}) {
 	ticker := time.NewTicker(time.Duration(1000000000/speed) * time.Nanosecond)
-	log.Printf("ticker speed %d\n", speed)
+	log.Println("ticker speed", speed)
 	c := make(chan interface{}, 100)
 	defer close(c)
 	index, endCount := 0, 0
 	for {
 		select {
-		case _ = <-ticker.C:
+		case <-ticker.C:
 			if index >= count {
 				ticker.Stop()
 				log.Println("ticker.Stop")

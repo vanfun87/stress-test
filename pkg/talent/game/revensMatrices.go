@@ -68,7 +68,7 @@ type revenRESPOND struct {
 }
 
 //UserJoined aa
-func (hf *RevensMatrices) UserJoined(g *GameClient, msg *JoginedMsg) {
+func (hf *RevensMatrices) UserJoined(g *GameClient, msg *JoinedMsg) {
 
 }
 
@@ -101,7 +101,6 @@ func (hf *RevensMatrices) PlayerUpdated(g *GameClient, msg []byte) {
 		g.stopWatch.Log("json Unmarshal err", err.Error())
 		return
 	}
-	//log.Println(playerUpdated)
 	for _, move := range playerUpdated.Moves {
 		switch move {
 		case SOLVE:

@@ -108,7 +108,7 @@ type Event struct {
 // 	},
 // 	"channel": "/gameroom"
 //   }
-type JoginedMsg struct {
+type JoinedMsg struct {
 	Active bool   `json:"active"`
 	Event  string `json:"event"`
 	Room   string `json:"room"`
