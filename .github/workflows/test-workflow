@@ -1,16 +1,5 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+name: Job Info and Feishu Notification
 
-# This workflow lets you generate SLSA provenance file for your project.
-# The generation satisfies level 3 for the provenance requirements - see https://slsa.dev/spec/v0.1/requirements
-# The project is an initiative of the OpenSSF (openssf.org) and is developed at
-# https://github.com/slsa-framework/slsa-github-generator.
-# The provenance file can be verified using https://github.com/slsa-framework/slsa-verifier.
-# For more information about SLSA and how it improves the supply-chain, visit slsa.dev.
-
-name: Test workflow Action
 on:
   push:
     branches:
@@ -18,50 +7,28 @@ on:
   workflow_dispatch:  # 允许手动触发
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    outputs:
-      digests: ${{ steps.hash.outputs.digests }}
-
+  print-info:
+    runs-on: ubuntu-latest  # 使用免费 Linux 运行环境
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # ========================================================
-      #
-      # Step 1: Build your artifacts.
-      #
-      # ========================================================
-      - name: Build artifacts
+      - name: Print Job Information
         run: |
-            # These are some amazing artifacts.
-            echo "artifact1" > artifact1
-            echo "artifact2" > artifact2
+          echo "Job Name: ${{ github.job }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Trigger: ${{ github.event_name }}"
 
-      # ========================================================
-      #
-      # Step 2: Add a step to generate the provenance subjects
-      #         as shown below. Update the sha256 sum arguments
-      #         to include all binaries that you generate
-      #         provenance for.
-      #
-      # ========================================================
-      - name: Send Feishu Notification
-        if: always()
+      - name: Notify Feishu
+        if: always()  # 不管成功还是失败，都会执行
         run: |
-          STATUS=${{ job.status }}
-          WORKFLOW="${{ github.workflow }}"
-          URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          MESSAGE="GitHub Actions 任务 **${WORKFLOW}** 运行完成 🎉\n
-          🔹 **状态**: ${STATUS}\n
-          🔹 **环境**: Staging\n
-          🔹 **详情**: [点击查看](${URL})"
-
-          curl -X POST "https://open.feishu.cn/open-apis/bot/v2/hook/cadf8f3a-c82e-46ee-98b8-7623f2789098" \
-          -H "Content-Type: application/json" \
-          -d "{
-            \"msg_type\": \"text\",
-            \"content\": {
-              \"text\": \"$MESSAGE\"
-            }
-          }"
+          curl -X POST "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_FEISHU_WEBHOOK" \
+               -H "Content-Type: application/json" \
+               -d '{
+                  "msg_type": "text",
+                  "content": {
+                    "text": "GitHub Actions 执行完成: ${{ github.repository }}\nWorkflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\nURL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }'
