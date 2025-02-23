@@ -10,11 +10,12 @@
 # The provenance file can be verified using https://github.com/slsa-framework/slsa-verifier.
 # For more information about SLSA and how it improves the supply-chain, visit slsa.dev.
 
-name: SLSA generic generator
+name: Test workflow Action
 on:
-  workflow_dispatch:
-  release:
-    types: [created]
+  push:
+    branches:
+      - main  # 触发条件：当 push 到 main 分支时执行
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build:
@@ -64,14 +65,3 @@ jobs:
               \"text\": \"$MESSAGE\"
             }
           }"
-
-  provenance:
-    needs: [build]
-    permissions:
-      actions: read   # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
-    with:
-      base64-subjects: "${{ needs.build.outputs.digests }}"
-      upload-assets: true # Optional: Upload to a new release
